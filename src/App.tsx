@@ -3,6 +3,7 @@ import type { FormEvent } from 'react'
 import { WORD_FAMILIES } from './data/wordFamilies'
 import { stemOfTheDay } from './game/stemOfTheDay'
 import type { Clock } from './game/stemOfTheDay'
+import Tree from './components/Tree'
 
 interface AppProps {
   clock?: Clock
@@ -52,6 +53,9 @@ export default function App({ clock = () => new Date() }: AppProps) {
       <div className="flex flex-col items-center gap-2">
         <p className="text-sm uppercase tracking-widest text-slate-400">Stem</p>
         <h2 className="text-6xl font-bold tracking-wide">{family.stem}</h2>
+      </div>
+      <div className="w-full max-w-3xl overflow-x-auto px-4">
+        <Tree stem={family.stem} sprouts={sprouts} />
       </div>
       <form aria-label="Grow a word" onSubmit={grow} className="flex flex-col items-center gap-2">
         <div

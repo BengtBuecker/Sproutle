@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen, within } from '@testing-library/react'
 import { afterEach, describe, it, expect } from 'vitest'
 import App from '../App'
 import { WORD_FAMILIES } from '../data/wordFamilies'
@@ -11,6 +11,14 @@ const TOTAL = WORD_FAMILIES['water'].words.filter((word) => word !== 'water').le
 
 function mountApp() {
   return render(<App clock={() => new Date(TODAY)} />)
+}
+
+function tree() {
+  return screen.getByRole('img', { name: 'Tree' })
+}
+
+function groupOf(label: string) {
+  return within(tree()).getByText(label).closest('g')!
 }
 
 function grow(word: string) {
@@ -32,6 +40,69 @@ describe('App', () => {
     unmount()
     render(<App clock={() => new Date(FIRST_INSTANT_AFTER_MIDNIGHT)} />)
     expect(screen.getByRole('heading', { name: 'wind', level: 2 })).toBeInTheDocument()
+  })
+})
+
+describe('App tree growth', () => {
+  it('renders the Tree with the Stem as its root', () => {
+    mountApp()
+    expect(screen.getByRole('img', { name: 'Tree' })).toBeInTheDocument()
+  })
+
+  it('labels every Sprout with its word', () => {
+    mountApp()
+    grow('backwater')
+    grow('watery')
+    grow('waterproof')
+    const tree = screen.getByRole('img', { name: 'Tree' })
+    for (const word of ['backwater', 'watery', 'waterproof']) {
+      expect(within(tree).getByText(word)).toBeInTheDocument()
+    }
+  })
+
+  it('grows a new Sprout off the branch of the word it extends', () => {
+    mountApp()
+    grow('waterproof')
+    grow('waterproofing')
+    expect(groupOf('waterproof')).toContainElement(groupOf('waterproofing'))
+  })
+
+  it('shares a twig between a word and its extension', () => {
+    mountApp()
+    grow('waterproof')
+    grow('waterproofs')
+    expect(groupOf('waterproof')).toContainElement(groupOf('waterproofs'))
+  })
+
+  it('keeps unrelated words on separate limbs', () => {
+    mountApp()
+    grow('waterproof')
+    grow('waterproofing')
+    grow('watery')
+    expect(groupOf('waterproof')).not.toContainElement(groupOf('watery'))
+  })
+
+  it('decomposes a word into a prefix branch and a suffix twig around the Stem', () => {
+    mountApp()
+    grow('backwatered')
+    expect(groupOf('BACK')).toContainElement(groupOf('backwatered'))
+  })
+
+  it('grows the leaf when a later Sprout completes an existing branch', () => {
+    mountApp()
+    grow('backwatered')
+    grow('backwater')
+    expect(groupOf('backwater')).toHaveClass('grow')
+    expect(groupOf('backwater')).toContainElement(groupOf('backwatered'))
+  })
+
+  it('animates only the newest Sprout', () => {
+    mountApp()
+    grow('waterproof')
+    expect(groupOf('waterproof')).toHaveClass('grow')
+    grow('waterproofing')
+    expect(groupOf('waterproofing')).toHaveClass('grow')
+    expect(groupOf('waterproof')).not.toHaveClass('grow')
   })
 })
 
