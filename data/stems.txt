@@ -1,0 +1,19 @@
+# Curated candidate Stems — one lowercase word per line.
+# Lines starting with # are comments.
+# At build time each candidate is vetted: it must be a word in the word list and
+# its Word family must reach the minimum family size, or it is rejected.
+# Curated by hand on 2026-09-25 against data/words/words_alpha.txt, choosing
+# word-like Stems with playable family sizes (roughly 100-750 words each).
+
+play
+port
+hand
+work
+stand
+wind
+light
+water
+fire
+walk
+care
+sun
