@@ -200,6 +200,84 @@ describe('App daily continuity', () => {
   })
 })
 
+describe('App shareable result', () => {
+  it('downloads a share artifact with the grown Tree and stats, client-side only', async () => {
+    mountApp()
+    grow('backwater')
+    const created: Blob[] = []
+    const savedCreate = Object.getOwnPropertyDescriptor(URL, 'createObjectURL')
+    const savedRevoke = Object.getOwnPropertyDescriptor(URL, 'revokeObjectURL')
+    const clickSpy = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {})
+    Object.defineProperty(URL, 'createObjectURL', {
+      value: (blob: Blob) => {
+        created.push(blob)
+        return 'blob:mock'
+      },
+      configurable: true,
+    })
+    Object.defineProperty(URL, 'revokeObjectURL', { value: () => {}, configurable: true })
+    try {
+      fireEvent.click(screen.getByRole('button', { name: 'Share result' }))
+      expect(created).toHaveLength(1)
+      expect(created[0].type).toBe('image/svg+xml')
+      expect(clickSpy).toHaveBeenCalledTimes(1)
+      const svg = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader()
+        reader.onload = () => resolve(String(reader.result))
+        reader.onerror = () => reject(reader.error)
+        reader.readAsText(created[0])
+      })
+      expect(svg).toContain('backwater')
+      expect(svg).toContain('Points: 9')
+      expect(svg).toContain('Sprouts found: 1')
+      expect(svg).not.toContain('waterproof')
+    } finally {
+      clickSpy.mockRestore()
+      if (savedCreate) Object.defineProperty(URL, 'createObjectURL', savedCreate)
+      else delete (URL as { createObjectURL?: unknown }).createObjectURL
+      if (savedRevoke) Object.defineProperty(URL, 'revokeObjectURL', savedRevoke)
+      else delete (URL as { revokeObjectURL?: unknown }).revokeObjectURL
+    }
+  })
+})
+
+describe('App keyboard and motion', () => {
+  it('is operable by keyboard alone: the word field starts focused and the Share control is a real button', () => {
+    mountApp()
+    expect(screen.getByRole('textbox', { name: 'Grow a word' })).toHaveFocus()
+    const share = screen.getByRole('button', { name: 'Share result' })
+    expect(share.tabIndex).toBeGreaterThanOrEqual(0)
+    expect(share.tagName).toBe('BUTTON')
+  })
+
+  it('clears feedback on a timer when the player prefers reduced motion', () => {
+    vi.stubGlobal(
+      'matchMedia',
+      (query: string) => ({ matches: query.includes('reduce'), media: query }),
+    )
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] })
+    try {
+      mountApp()
+      grow('waterz')
+      expect(screen.getByRole('status')).toHaveTextContent('invalid')
+      act(() => {
+        vi.advanceTimersByTime(500)
+      })
+      expect(screen.queryByRole('status')).not.toBeInTheDocument()
+    } finally {
+      vi.unstubAllGlobals()
+      vi.useRealTimers()
+    }
+  })
+
+  it('keeps feedback until the shake ends when motion is allowed', () => {
+    mountApp()
+    grow('waterz')
+    expect(screen.getByRole('status')).toHaveTextContent('invalid')
+    expect(screen.getByRole('status')).toBeInTheDocument()
+  })
+})
+
 describe('App word entry', () => {
   it('counts a valid word once: the counter moves and Points accrue by full length', () => {
     mountApp()

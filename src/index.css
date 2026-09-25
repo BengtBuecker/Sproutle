@@ -96,3 +96,16 @@
   font-size: 10px;
   letter-spacing: 0.05em;
 }
+
+@media (prefers-reduced-motion: reduce) {
+  .shake,
+  .pulse-once {
+    animation: none;
+  }
+
+  .grow line,
+  .grow circle,
+  .grow text {
+    animation: none;
+  }
+}

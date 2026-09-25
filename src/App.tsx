@@ -4,6 +4,8 @@ import { WORD_FAMILIES } from './data/wordFamilies'
 import { stemOfTheDay, utcDayNumber } from './game/stemOfTheDay'
 import type { Clock } from './game/stemOfTheDay'
 import { loadProgress, loadStreak, saveProgress, saveStreak } from './game/progress'
+import { prefersReducedMotion } from './game/motion'
+import { buildShareSvg, downloadShareImage } from './game/shareCard'
 import Tree from './components/Tree'
 
 interface AppProps {
@@ -24,6 +26,7 @@ const FEEDBACK: Record<FeedbackKind, { message: string; animation: string; text:
 
 const DEFAULT_CLOCK: Clock = () => new Date()
 const ROLLOVER_CHECK_MS = 60_000
+const REDUCED_MOTION_FEEDBACK_MS = 400
 
 export default function App({ clock = DEFAULT_CLOCK }: AppProps) {
   const [currentDay, setCurrentDay] = useState(() => utcDayNumber(clock()))
@@ -68,6 +71,12 @@ export default function App({ clock = DEFAULT_CLOCK }: AppProps) {
     return () => clearInterval(timer)
   }, [clock, currentDay])
 
+  useEffect(() => {
+    if (feedback === null || !prefersReducedMotion()) return
+    const timer = setTimeout(() => setFeedback(null), REDUCED_MOTION_FEEDBACK_MS)
+    return () => clearTimeout(timer)
+  }, [feedback])
+
   function grow(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     const word = draft.trim().toLowerCase()
@@ -93,14 +102,24 @@ export default function App({ clock = DEFAULT_CLOCK }: AppProps) {
     setFeedback(null)
   }
 
+  function share() {
+    downloadShareImage(
+      buildShareSvg(family.stem, sprouts, {
+        points,
+        found: sprouts.length,
+        streak: displayedStreak,
+      }),
+    )
+  }
+
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center gap-8 bg-slate-900 text-slate-100">
-      <h1 className="text-4xl font-bold text-slate-100">Sproutle</h1>
-      <div className="flex flex-col items-center gap-2">
-        <p className="text-sm uppercase tracking-widest text-slate-400">Stem</p>
-        <h2 className="text-6xl font-bold tracking-wide">{family.stem}</h2>
+    <div className="min-h-screen flex flex-col items-center justify-center gap-6 sm:gap-8 bg-slate-900 text-slate-100 px-4 py-8">
+      <h1 className="text-3xl sm:text-4xl font-bold text-slate-100">Sproutle</h1>
+      <div className="flex flex-col items-center gap-1 sm:gap-2">
+        <p className="text-xs sm:text-sm uppercase tracking-widest text-slate-400">Stem</p>
+        <h2 className="text-4xl sm:text-6xl font-bold tracking-wide">{family.stem}</h2>
       </div>
-      <div className="w-full max-w-3xl overflow-x-auto px-4">
+      <div className="w-full max-w-3xl overflow-x-auto">
         <Tree stem={family.stem} sprouts={sprouts} />
       </div>
       <form aria-label="Grow a word" onSubmit={grow} className="flex flex-col items-center gap-2">
@@ -114,7 +133,7 @@ export default function App({ clock = DEFAULT_CLOCK }: AppProps) {
             aria-label="Grow a word"
             value={draft}
             onChange={(event) => setDraft(event.target.value)}
-            className="rounded bg-slate-800 px-4 py-2 text-center text-2xl tracking-wide text-slate-100 focus:outline-none focus:ring-2 focus:ring-emerald-400"
+            className="rounded bg-slate-800 px-4 py-2 text-center text-xl sm:text-2xl tracking-wide text-slate-100 focus:outline-none focus:ring-2 focus:ring-emerald-400"
           />
         </div>
         {feedback && (
@@ -123,13 +142,20 @@ export default function App({ clock = DEFAULT_CLOCK }: AppProps) {
           </p>
         )}
       </form>
-      <p className="text-lg text-slate-300">
-        {sprouts.length} of {findableWords.length}
-      </p>
-      <div className="flex gap-8">
-        <p className="text-lg text-slate-300">Points: {points}</p>
-        <p className="text-lg text-slate-300">Streak: {displayedStreak}</p>
+      <div className="flex flex-wrap justify-center gap-x-8 gap-y-1">
+        <p className="text-base sm:text-lg text-slate-300">
+          {sprouts.length} of {findableWords.length}
+        </p>
+        <p className="text-base sm:text-lg text-slate-300">Points: {points}</p>
+        <p className="text-base sm:text-lg text-slate-300">Streak: {displayedStreak}</p>
       </div>
+      <button
+        type="button"
+        onClick={share}
+        className="rounded-full bg-emerald-500 px-5 py-2 text-sm sm:text-base font-semibold text-slate-900 hover:bg-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-300"
+      >
+        Share result
+      </button>
     </div>
   )
 }
