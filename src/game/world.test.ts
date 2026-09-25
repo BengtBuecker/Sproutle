@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { buildTree } from './tree'
 import {
+  FOLLOW_ZOOM,
   PAN_MARGIN,
   START_CAMERA,
   ZOOM_MAX,
@@ -96,6 +97,41 @@ describe('cameraReducer following', () => {
     expect(resumed.following).toBe(true)
     const panned = cameraReducer(resumed, { type: 'follow-growth' }, after)
     expect(panned).not.toEqual(heldCamera)
+  })
+
+  it('follows at a fixed close-up zoom: the whole Tree is not always visible', () => {
+    const wide = worldFromModel(
+      buildTree('water', [
+        'watery',
+        'waterproof',
+        'backwater',
+        'seawater',
+        'cutwater',
+        'eyewater',
+        'dewater',
+        'rewater',
+        'unwater',
+        'waterbed',
+        'waterbird',
+        'waterboard',
+        'waterbottle',
+        'waterborne',
+        'watercolour',
+        'watercooled',
+        'watercourse',
+        'watercraft',
+        'watercross',
+        'waterdrum',
+      ]),
+    )
+    const camera = cameraReducer(START_CAMERA, { type: 'frame-tree' }, wide)
+    expect(camera.zoom).toBe(zoomFit(wide))
+    const followed = cameraReducer(camera, { type: 'follow-growth' }, wide)
+    expect(followed.zoom).toBe(FOLLOW_ZOOM)
+    const view = cameraWindowOf(followed)
+    const bounds = treeBounds(wide)
+    const treeWiderThanView = bounds.maxX - bounds.minX > view.right - view.left
+    expect(treeWiderThanView).toBe(true)
   })
 
   it('keeps the pan inside the Tree bounds plus a margin', () => {

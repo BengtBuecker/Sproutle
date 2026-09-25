@@ -71,6 +71,7 @@ export function groundSpan(world: World): { left: number; right: number } {
 export const VIEW_WIDTH = 1200
 export const VIEW_HEIGHT = 800
 export const ZOOM_MAX = 2.5
+export const FOLLOW_ZOOM = 1
 
 export const PAN_MARGIN = 120
 const BOUNDS_PAD_LEFT = 10
@@ -186,7 +187,12 @@ export function cameraReducer(camera: Camera, action: CameraAction, world: World
     case 'follow-growth': {
       if (!camera.following) return camera
       const target = newestPlacement(world)
-      return clampCamera(world, { ...camera, focusX: target.x, focusY: target.y })
+      return clampCamera(world, {
+        ...camera,
+        focusX: target.x,
+        focusY: target.y,
+        zoom: FOLLOW_ZOOM,
+      })
     }
     case 'set-following':
       return { ...camera, following: action.following }
