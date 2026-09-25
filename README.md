@@ -40,3 +40,8 @@ Design settled; implementation not started. Working title: **Sproutle**.
 ## License
 
 MIT (see [LICENSE](LICENSE))
+
+## Credits
+
+This project was developed with the help of AI, using [OpenCode](https://opencode.ai).
+
