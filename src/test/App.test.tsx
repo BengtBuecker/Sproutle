@@ -1,13 +1,17 @@
-import { cleanup, fireEvent, render, screen, within } from '@testing-library/react'
-import { afterEach, describe, it, expect } from 'vitest'
+import { act, cleanup, fireEvent, render, screen, within } from '@testing-library/react'
+import { afterEach, describe, it, expect, vi } from 'vitest'
 import App from '../App'
 import { WORD_FAMILIES } from '../data/wordFamilies'
 
-afterEach(cleanup)
+afterEach(() => {
+  cleanup()
+  localStorage.clear()
+})
 
 const TODAY = '2026-09-25T15:04:05.000Z'
 const FIRST_INSTANT_AFTER_MIDNIGHT = '2026-09-26T00:00:00.000Z'
 const TOTAL = WORD_FAMILIES['water'].words.filter((word) => word !== 'water').length
+const TOTAL_WIND = WORD_FAMILIES['wind'].words.filter((word) => word !== 'wind').length
 
 function mountApp() {
   return render(<App clock={() => new Date(TODAY)} />)
@@ -103,6 +107,96 @@ describe('App tree growth', () => {
     grow('waterproofing')
     expect(groupOf('waterproofing')).toHaveClass('grow')
     expect(groupOf('waterproof')).not.toHaveClass('grow')
+  })
+})
+
+describe('App daily continuity', () => {
+  it('restores Sprouts, Points, counter, Tree and Streak after a reload', () => {
+    const { unmount } = mountApp()
+    grow('backwater')
+    grow('watery')
+    expect(screen.getByText(`2 of ${TOTAL}`)).toBeInTheDocument()
+    expect(screen.getByText('Points: 15')).toBeInTheDocument()
+    unmount()
+
+    mountApp()
+    expect(screen.getByText(`2 of ${TOTAL}`)).toBeInTheDocument()
+    expect(screen.getByText('Points: 15')).toBeInTheDocument()
+    expect(within(tree()).getByText('backwater')).toBeInTheDocument()
+    expect(within(tree()).getByText('watery')).toBeInTheDocument()
+    expect(screen.getByText('Streak: 1')).toBeInTheDocument()
+  })
+
+  it('starts a fresh Puzzle after a reload on a new UTC day', () => {
+    const { unmount } = mountApp()
+    grow('backwater')
+    grow('watery')
+    unmount()
+
+    render(<App clock={() => new Date('2026-09-26T10:00:00.000Z')} />)
+    expect(screen.getByRole('heading', { name: 'wind', level: 2 })).toBeInTheDocument()
+    expect(screen.getByText(`0 of ${TOTAL_WIND}`)).toBeInTheDocument()
+    expect(screen.queryByText('Points: 15')).not.toBeInTheDocument()
+    expect(within(tree()).queryByText('backwater')).not.toBeInTheDocument()
+  })
+
+  it('clears today\'s Sprouts at UTC midnight and advances the Streak on consecutive days', () => {
+    vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval'] })
+    try {
+      let now = new Date('2026-09-25T23:00:00.000Z')
+      render(<App clock={() => new Date(now)} />)
+
+      grow('watery')
+      expect(screen.getByText('Streak: 1')).toBeInTheDocument()
+      grow('waterproof')
+      expect(screen.getByText('Streak: 1')).toBeInTheDocument()
+
+      now = new Date('2026-09-26T00:00:30.000Z')
+      act(() => {
+        vi.advanceTimersByTime(61_000)
+      })
+      expect(screen.getByRole('heading', { name: 'wind', level: 2 })).toBeInTheDocument()
+      expect(screen.getByText(`0 of ${TOTAL_WIND}`)).toBeInTheDocument()
+      expect(screen.getByText('Points: 0')).toBeInTheDocument()
+
+      grow('windy')
+      expect(screen.getByText('Streak: 2')).toBeInTheDocument()
+      expect(screen.getByText('Points: 5')).toBeInTheDocument()
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('resets the Streak after a gap of days', () => {
+    vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval'] })
+    try {
+      let now = new Date('2026-09-25T23:00:00.000Z')
+      render(<App clock={() => new Date(now)} />)
+
+      grow('watery')
+      expect(screen.getByText('Streak: 1')).toBeInTheDocument()
+
+      now = new Date('2026-09-26T00:00:30.000Z')
+      act(() => {
+        vi.advanceTimersByTime(61_000)
+      })
+      grow('windy')
+      expect(screen.getByText('Streak: 2')).toBeInTheDocument()
+
+      now = new Date('2026-09-30T00:00:30.000Z')
+      act(() => {
+        vi.advanceTimersByTime(61_000)
+      })
+      grow('handy')
+      expect(screen.getByText('Streak: 1')).toBeInTheDocument()
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('shows a Streak of zero before anything is grown', () => {
+    mountApp()
+    expect(screen.getByText('Streak: 0')).toBeInTheDocument()
   })
 })
 

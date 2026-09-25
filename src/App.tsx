@@ -1,8 +1,9 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import type { FormEvent } from 'react'
 import { WORD_FAMILIES } from './data/wordFamilies'
-import { stemOfTheDay } from './game/stemOfTheDay'
+import { stemOfTheDay, utcDayNumber } from './game/stemOfTheDay'
 import type { Clock } from './game/stemOfTheDay'
+import { loadProgress, loadStreak, saveProgress, saveStreak } from './game/progress'
 import Tree from './components/Tree'
 
 interface AppProps {
@@ -21,14 +22,51 @@ const FEEDBACK: Record<FeedbackKind, { message: string; animation: string; text:
   duplicate: { message: 'already sprouted', animation: 'pulse-once', text: 'text-sky-300' },
 }
 
-export default function App({ clock = () => new Date() }: AppProps) {
+const DEFAULT_CLOCK: Clock = () => new Date()
+const ROLLOVER_CHECK_MS = 60_000
+
+export default function App({ clock = DEFAULT_CLOCK }: AppProps) {
+  const [currentDay, setCurrentDay] = useState(() => utcDayNumber(clock()))
   const family = stemOfTheDay(WORD_FAMILIES, clock())
   const findableWords = family.words.filter((word) => word !== family.stem)
-  const [sprouts, setSprouts] = useState<string[]>([])
+  const [sprouts, setSprouts] = useState<string[]>(() => {
+    const stored = loadProgress()
+    if (stored === null || stored.dayNumber !== currentDay || stored.stem !== family.stem) {
+      return []
+    }
+    return [...new Set(stored.sprouts)].filter((word) => findableWords.includes(word))
+  })
+  const [streak, setStreak] = useState(() => {
+    const stored = loadStreak()
+    return stored ?? { lastPlayedDay: null, count: 0 }
+  })
   const [draft, setDraft] = useState('')
   const [feedback, setFeedback] = useState<Feedback | null>(null)
 
   const points = sprouts.reduce((sum, sprout) => sum + sprout.length, 0)
+  const displayedStreak =
+    streak.lastPlayedDay !== null && streak.lastPlayedDay >= currentDay - 1 ? streak.count : 0
+
+  useEffect(() => {
+    saveProgress({ dayNumber: currentDay, stem: family.stem, sprouts })
+  }, [currentDay, family.stem, sprouts])
+
+  useEffect(() => {
+    if (streak.lastPlayedDay !== null) saveStreak(streak)
+  }, [streak])
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      const day = utcDayNumber(clock())
+      if (day !== currentDay) {
+        setCurrentDay(day)
+        setSprouts([])
+        setDraft('')
+        setFeedback(null)
+      }
+    }, ROLLOVER_CHECK_MS)
+    return () => clearInterval(timer)
+  }, [clock, currentDay])
 
   function grow(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -44,6 +82,14 @@ export default function App({ clock = () => new Date() }: AppProps) {
       return
     }
     setSprouts((s) => [...s, word])
+    setStreak((s) =>
+      s.lastPlayedDay === currentDay
+        ? s
+        : {
+            lastPlayedDay: currentDay,
+            count: s.lastPlayedDay === currentDay - 1 ? s.count + 1 : 1,
+          },
+    )
     setFeedback(null)
   }
 
@@ -80,7 +126,10 @@ export default function App({ clock = () => new Date() }: AppProps) {
       <p className="text-lg text-slate-300">
         {sprouts.length} of {findableWords.length}
       </p>
-      <p className="text-lg text-slate-300">Points: {points}</p>
+      <div className="flex gap-8">
+        <p className="text-lg text-slate-300">Points: {points}</p>
+        <p className="text-lg text-slate-300">Streak: {displayedStreak}</p>
+      </div>
     </div>
   )
 }
