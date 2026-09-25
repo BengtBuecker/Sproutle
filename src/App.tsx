@@ -113,49 +113,55 @@ export default function App({ clock = DEFAULT_CLOCK }: AppProps) {
   }
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center gap-6 sm:gap-8 bg-slate-900 text-slate-100 px-4 py-8">
-      <h1 className="text-3xl sm:text-4xl font-bold text-slate-100">Sproutle</h1>
-      <div className="flex flex-col items-center gap-1 sm:gap-2">
-        <p className="text-xs sm:text-sm uppercase tracking-widest text-slate-400">Stem</p>
-        <h2 className="text-4xl sm:text-6xl font-bold tracking-wide">{family.stem}</h2>
-      </div>
-      <div className="w-full max-w-3xl overflow-x-auto">
+    <div className="fixed inset-0 bg-slate-900 text-slate-100">
+      <div className="absolute inset-0">
         <Tree stem={family.stem} sprouts={sprouts} />
       </div>
-      <form aria-label="Grow a word" onSubmit={grow} className="flex flex-col items-center gap-2">
-        <div
-          key={feedback?.nonce}
-          className={feedback ? FEEDBACK[feedback.kind].animation : undefined}
-          onAnimationEnd={() => setFeedback(null)}
-        >
-          <input
-            autoFocus
-            aria-label="Grow a word"
-            value={draft}
-            onChange={(event) => setDraft(event.target.value)}
-            className="rounded bg-slate-800 px-4 py-2 text-center text-xl sm:text-2xl tracking-wide text-slate-100 focus:outline-none focus:ring-2 focus:ring-emerald-400"
-          />
+      <main className="absolute inset-0 z-10 pointer-events-none flex flex-col justify-between p-4">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-bold text-slate-100">Sproutle</h1>
+            <p className="mt-2 text-xs uppercase tracking-widest text-slate-400">Stem</p>
+            <h2 className="text-3xl sm:text-5xl font-bold tracking-wide">{family.stem}</h2>
+          </div>
+          <div className="text-right text-base sm:text-lg text-slate-300">
+            <p>
+              {sprouts.length} of {findableWords.length}
+            </p>
+            <p>Points: {points}</p>
+            <p>Streak: {displayedStreak}</p>
+          </div>
         </div>
-        {feedback && (
-          <p role="status" className={FEEDBACK[feedback.kind].text}>
-            {FEEDBACK[feedback.kind].message}
-          </p>
-        )}
-      </form>
-      <div className="flex flex-wrap justify-center gap-x-8 gap-y-1">
-        <p className="text-base sm:text-lg text-slate-300">
-          {sprouts.length} of {findableWords.length}
-        </p>
-        <p className="text-base sm:text-lg text-slate-300">Points: {points}</p>
-        <p className="text-base sm:text-lg text-slate-300">Streak: {displayedStreak}</p>
-      </div>
-      <button
-        type="button"
-        onClick={share}
-        className="rounded-full bg-emerald-500 px-5 py-2 text-sm sm:text-base font-semibold text-slate-900 hover:bg-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-300"
-      >
-        Share result
-      </button>
+        <div className="flex flex-col items-center gap-2 pointer-events-auto">
+          <form aria-label="Grow a word" onSubmit={grow} className="flex flex-col items-center gap-2">
+            <div
+              key={feedback?.nonce}
+              className={feedback ? FEEDBACK[feedback.kind].animation : undefined}
+              onAnimationEnd={() => setFeedback(null)}
+            >
+              <input
+                autoFocus
+                aria-label="Grow a word"
+                value={draft}
+                onChange={(event) => setDraft(event.target.value)}
+                className="rounded bg-slate-800 px-4 py-2 text-center text-xl sm:text-2xl tracking-wide text-slate-100 focus:outline-none focus:ring-2 focus:ring-emerald-400"
+              />
+            </div>
+            {feedback && (
+              <p role="status" className={FEEDBACK[feedback.kind].text}>
+                {FEEDBACK[feedback.kind].message}
+              </p>
+            )}
+          </form>
+          <button
+            type="button"
+            onClick={share}
+            className="rounded-full bg-emerald-500 px-5 py-2 text-sm sm:text-base font-semibold text-slate-900 hover:bg-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-300"
+          >
+            Share result
+          </button>
+        </div>
+      </main>
     </div>
   )
 }

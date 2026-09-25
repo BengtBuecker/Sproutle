@@ -78,6 +78,12 @@
   stroke-linecap: round;
 }
 
+.ground {
+  stroke: var(--color-emerald-700);
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+
 .leaf-dot {
   fill: var(--color-green-400);
 }

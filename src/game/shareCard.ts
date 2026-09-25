@@ -1,5 +1,6 @@
 import { buildTree } from './tree'
-import { layoutTree, treeCanvasSize } from './treeLayout'
+import { groundSpan, worldFromModel } from './world'
+import type { World } from './world'
 
 export interface ShareStats {
   points: number
@@ -18,22 +19,23 @@ function escapeText(text: string): string {
   return text.replace(/[&<>"]/g, (char) => ESCAPE[char])
 }
 
-export function buildShareSvg(stem: string, sprouts: readonly string[], stats: ShareStats): string {
-  const model = buildTree(stem, sprouts)
-  const layout = layoutTree(model)
-  const { width, height } = treeCanvasSize(layout.maxDepth, layout.leafCount)
-  const header = 56
-  const footer = 40
-  const totalHeight = height + header + footer
+const HEADER = 56
+const TOP_PAD = 30
+const FOOTER = 40
 
+function sceneShiftY(world: World): number {
+  return HEADER + TOP_PAD + world.height
+}
+
+function sceneShapes(world: World, shiftY: number): string[] {
   const shapes: string[] = []
-  for (const id of Object.keys(layout.placements)) {
-    const { node, x, y } = layout.placements[id]
-    const shiftedY = y + header
+  for (const id of Object.keys(world.placements)) {
+    const { node, x, y } = world.placements[id]
+    const shiftedY = shiftY + y
     if (node.parent !== null) {
-      const parent = layout.placements[node.parent]
+      const parent = world.placements[node.parent]
       shapes.push(
-        `<line x1="${parent.x}" y1="${parent.y + header}" x2="${x}" y2="${y + header}" stroke="#64748b" stroke-width="2" stroke-linecap="round" />`,
+        `<line x1="${parent.x}" y1="${shiftY + parent.y}" x2="${x}" y2="${shiftedY}" stroke="#64748b" stroke-width="2" stroke-linecap="round" />`,
       )
     }
 
@@ -51,14 +53,25 @@ export function buildShareSvg(stem: string, sprouts: readonly string[], stats: S
       }
     }
   }
+  return shapes
+}
+
+export function buildShareSvg(stem: string, sprouts: readonly string[], stats: ShareStats): string {
+  const model = buildTree(stem, sprouts)
+  const world = worldFromModel(model)
+  const shiftY = sceneShiftY(world)
+  const totalHeight = HEADER + TOP_PAD + world.height + FOOTER
+  const ground = groundSpan(world)
+  const centerX = ground.left + world.width / 2
 
   return [
-    `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${totalHeight}" viewBox="0 0 ${width} ${totalHeight}" role="img" aria-label="Sproutle share card">`,
-    `<rect width="${width}" height="${totalHeight}" fill="#0f172a" />`,
-    `<text x="${width / 2}" y="28" text-anchor="middle" font-size="18" font-weight="bold" fill="#4ade80" font-family="system-ui, sans-serif">Sproutle</text>`,
-    `<text x="${width / 2}" y="48" text-anchor="middle" font-size="12" fill="#94a3b8" font-family="system-ui, sans-serif">Stem: ${escapeText(stem.toUpperCase())}</text>`,
-    ...shapes,
-    `<text x="${width / 2}" y="${totalHeight - 16}" text-anchor="middle" font-size="13" fill="#e2e8f0" font-family="system-ui, sans-serif">Points: ${stats.points} · Sprouts found: ${stats.found} · Streak: ${stats.streak}</text>`,
+    `<svg xmlns="http://www.w3.org/2000/svg" width="${world.width}" height="${totalHeight}" viewBox="${ground.left} 0 ${world.width} ${totalHeight}" role="img" aria-label="Sproutle share card">`,
+    `<rect x="${ground.left}" y="0" width="${world.width}" height="${totalHeight}" fill="#0f172a" />`,
+    `<text x="${centerX}" y="28" text-anchor="middle" font-size="18" font-weight="bold" fill="#4ade80" font-family="system-ui, sans-serif">Sproutle</text>`,
+    `<text x="${centerX}" y="48" text-anchor="middle" font-size="12" fill="#94a3b8" font-family="system-ui, sans-serif">Stem: ${escapeText(stem.toUpperCase())}</text>`,
+    ...sceneShapes(world, shiftY),
+    `<line x1="${ground.left}" y1="${shiftY}" x2="${ground.right}" y2="${shiftY}" stroke="#166534" stroke-width="2" />`,
+    `<text x="${centerX}" y="${totalHeight - 16}" text-anchor="middle" font-size="13" fill="#e2e8f0" font-family="system-ui, sans-serif">Points: ${stats.points} · Sprouts found: ${stats.found} · Streak: ${stats.streak}</text>`,
     '</svg>',
   ].join('\n')
 }

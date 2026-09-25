@@ -278,6 +278,89 @@ describe('App keyboard and motion', () => {
   })
 })
 
+describe('App layout: vertical Tree, fixed HUD', () => {
+  function treeZone() {
+    return screen.getByRole('img', { name: 'Tree' }).parentElement!
+  }
+  function hudPane() {
+    return screen.getByRole('form', { name: 'Grow a word' }).closest('main')!
+  }
+
+  it('keeps the HUD as a fixed overlay in front of the Tree zone, page unscrollable', () => {
+    mountApp()
+    grow('backwater')
+    grow('watery')
+    grow('waterproof')
+    expect(document.documentElement.scrollHeight).toBe(document.documentElement.clientHeight)
+    expect(treeZone()).toHaveClass('absolute', 'inset-0')
+    expect(hudPane()).toHaveClass('absolute', 'inset-0', 'z-10')
+    expect(
+      hudPane().compareDocumentPosition(treeZone()) & Node.DOCUMENT_POSITION_PRECEDING,
+    ).not.toBe(0)
+    expect(
+      treeZone().compareDocumentPosition(hudPane()) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).not.toBe(0)
+    expect(treeZone()).not.toContainElement(screen.getByRole('button', { name: 'Share result' }))
+    expect(treeZone()).not.toContainElement(screen.getByRole('textbox', { name: 'Grow a word' }))
+    expect(treeZone()).not.toContainElement(screen.getByRole('heading', { name: 'water', level: 2 }))
+    expect(treeZone()).not.toContainElement(screen.getByText(`3 of ${TOTAL}`))
+    expect(treeZone()).not.toContainElement(screen.getByText('Points: 25'))
+    expect(treeZone()).not.toContainElement(screen.getByText('Streak: 1'))
+  })
+
+  it('never reallocates the interface while words grow the Tree', () => {
+    mountApp()
+    grow('backwater')
+    const hudElements = [
+      hudPane(),
+      treeZone(),
+      screen.getByRole('button', { name: 'Share result' }),
+      screen.getByRole('textbox', { name: 'Grow a word' }),
+      screen.getByRole('heading', { name: 'water', level: 2 }),
+    ]
+    const before = {
+      zoneScrollHeight: treeZone().scrollHeight,
+      zoneClientHeight: treeZone().clientHeight,
+      pageScrollHeight: document.documentElement.scrollHeight,
+      pageClientHeight: document.documentElement.clientHeight,
+    }
+    grow('waterproof')
+    grow('waterproofing')
+    grow('watery')
+    expect(treeZone().scrollHeight).toBe(before.zoneScrollHeight)
+    expect(treeZone().clientHeight).toBe(before.zoneClientHeight)
+    expect(document.documentElement.scrollHeight).toBe(before.pageScrollHeight)
+    expect(document.documentElement.clientHeight).toBe(before.pageClientHeight)
+    expect(hudPane()).toBe(hudElements[0])
+    expect(treeZone()).toBe(hudElements[1])
+    expect(screen.getByRole('button', { name: 'Share result' })).toBe(hudElements[2])
+    expect(screen.getByRole('textbox', { name: 'Grow a word' })).toBe(hudElements[3])
+    expect(screen.getByRole('heading', { name: 'water', level: 2 })).toBe(hudElements[4])
+    expect(screen.getByText('Points: 38')).toBeVisible()
+    expect(screen.getByText(`4 of ${TOTAL}`)).toBeVisible()
+    expect(screen.getByText('Streak: 1')).toBeVisible()
+  })
+
+  it('grows the Tree field upward as chains deepen, and sideways as Leaves spread', () => {
+    mountApp()
+    const aspect = () => {
+      const [, , width, height] = screen
+        .getByRole('img', { name: 'Tree' })
+        .getAttribute('viewBox')!
+        .split(' ')
+        .map(Number)
+      return height / width
+    }
+    grow('awater')
+    grow('seawater')
+    grow('seawaters')
+    const deep = aspect()
+    expect(deep).toBeGreaterThan(0.6)
+    grow('waterproof')
+    expect(aspect()).toBeLessThan(deep)
+  })
+})
+
 describe('App word entry', () => {
   it('counts a valid word once: the counter moves and Points accrue by full length', () => {
     mountApp()
