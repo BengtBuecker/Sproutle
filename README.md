@@ -1,36 +1,36 @@
 # Sproutle
 
-Ein tägliches Worträtsel im Wordle-Format – statt eines einzelnen Zielworts geht es um Wortfamilien.
+A daily word puzzle in the Wordle format — instead of guessing a single target word, it's about word families.
 
-## Konzept
+## Concept
 
-Jeden Tag bekommen alle Spieler:innen denselben Wortstamm vorgegeben (z. B. `PLAY` oder `PORT`). Aufgabe: so viele gültige Wörter wie möglich daraus bilden – durch Vor- und Nachsilben.
+Every day, all players get the same word stem (e.g. `PLAY` or `PORT`). The goal: form as many valid words as possible from it — by adding prefixes and suffixes.
 
-**Beispiel (Stamm: PLAY):**
+**Example (stem: PLAY):**
 - PLAYER
 - REPLAY
 - DISPLAY
 - PLAYFUL
 
-## Visueller Kern
+## Visual Core
 
-Ein Baum wächst mit jedem gefundenen Wort:
-- Der Wortstamm bildet die **Wurzel**
-- Jedes gefundene Wort wird ein neuer **Ast** oder **Zweig**
-- Je mehr Wörter gefunden werden, desto größer und verzweigter der Baum
+A tree grows with every word found:
+- The word stem forms the **root**
+- Each found word becomes a new **branch** or **twig**
+- The more words found, the bigger and more branched the tree
 
-## Spielprinzip
+## Game Principle
 
-Folgt dem Wordle-Format:
-- Eine Aufgabe pro Tag
-- Ein gemeinsames Rätsel für alle Spieler:innen
-- Teilbare Ergebnisse (z. B. als Bild des eigenen Baumes)
-- Belohnungssystem für Vollständigkeit oder Kreativität bei der Wortfindung
+Follows the Wordle format:
+- One puzzle per day
+- A shared puzzle for all players
+- Shareable results (e.g. an image of your own tree)
+- Reward system for completeness or creativity in word-finding
 
 ## Status
 
-Frühe Konzeptphase. Arbeitsname: **Sproutle**.
+Early concept phase. Working title: **Sproutle**.
 
-## Lizenz
+## License
 
-MIT (siehe [LICENSE](LICENSE))
+MIT (see [LICENSE](LICENSE))
