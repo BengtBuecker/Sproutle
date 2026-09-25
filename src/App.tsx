@@ -32,6 +32,7 @@ export default function App({ clock = () => new Date() }: AppProps) {
     event.preventDefault()
     const word = draft.trim().toLowerCase()
     if (word.length === 0) return
+    setDraft('')
     if (!family.words.includes(word)) {
       setFeedback((f) => ({ kind: 'invalid', nonce: (f?.nonce ?? 0) + 1 }))
       return
@@ -41,7 +42,6 @@ export default function App({ clock = () => new Date() }: AppProps) {
       return
     }
     setSprouts((s) => [...s, word])
-    setDraft('')
     setFeedback(null)
   }
 

@@ -98,6 +98,16 @@ describe('App word entry', () => {
     expect(screen.getByText('Points: 9')).toBeInTheDocument()
   })
 
+  it('empties the text field after invalid and duplicate feedback', () => {
+    mountApp()
+    grow('waterz')
+    expect(screen.getByRole('textbox', { name: 'Grow a word' })).toHaveValue('')
+    grow('backwater')
+    expect(screen.getByRole('textbox', { name: 'Grow a word' })).toHaveValue('')
+    grow('backwater')
+    expect(screen.getByRole('textbox', { name: 'Grow a word' })).toHaveValue('')
+  })
+
   it('lets the player continue after invalid and duplicate feedback', () => {
     mountApp()
     grow('waterz')
