@@ -84,6 +84,10 @@
   stroke-linecap: round;
 }
 
+.camera-group {
+  transition: transform 450ms ease-out;
+}
+
 .leaf-dot {
   fill: var(--color-green-400);
 }
@@ -113,5 +117,9 @@
   .grow circle,
   .grow text {
     animation: none;
+  }
+
+  .camera-group {
+    transition: none;
   }
 }

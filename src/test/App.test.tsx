@@ -2,6 +2,23 @@ import { act, cleanup, fireEvent, render, screen, within } from '@testing-librar
 import { afterEach, describe, it, expect, vi } from 'vitest'
 import App from '../App'
 import { WORD_FAMILIES } from '../data/wordFamilies'
+import { buildTree } from '../game/tree'
+import {
+  groundSpan,
+  newestPlacement,
+  treeBounds,
+  worldFromModel,
+} from '../game/world'
+import { cameraWindowOf } from './cameraTestUtils'
+import type { CameraView } from './cameraTestUtils'
+
+function cameraOf(): CameraView {
+  const group = screen
+    .getByRole('img', { name: 'Tree' })
+    .querySelector('.camera-group')! as HTMLElement
+  const numbers = group.style.transform.match(/-?\d+(?:\.\d+)?/g)!.map(Number)
+  return { focusX: -numbers[3], focusY: -numbers[4], zoom: numbers[2] }
+}
 
 afterEach(() => {
   cleanup()
@@ -341,23 +358,62 @@ describe('App layout: vertical Tree, fixed HUD', () => {
     expect(screen.getByText('Streak: 1')).toBeVisible()
   })
 
-  it('grows the Tree field upward as chains deepen, and sideways as Leaves spread', () => {
+  it('pans the camera upward as chains deepen and sideways as Leaves spread', () => {
     mountApp()
-    const aspect = () => {
-      const [, , width, height] = screen
-        .getByRole('img', { name: 'Tree' })
-        .getAttribute('viewBox')!
-        .split(' ')
-        .map(Number)
-      return height / width
-    }
+    grow('waterproof')
+    const shallowY = cameraOf().focusY
     grow('awater')
     grow('seawater')
     grow('seawaters')
-    const deep = aspect()
-    expect(deep).toBeGreaterThan(0.6)
-    grow('waterproof')
-    expect(aspect()).toBeLessThan(deep)
+    const deepY = cameraOf().focusY
+    expect(deepY).toBeLessThan(shallowY)
+    const sidewaysX = cameraOf().focusX
+    grow('watery')
+    expect(cameraOf().focusX).toBeGreaterThan(sidewaysX)
+  })
+
+  it('pans the camera to every newly grown word so the newest growth always appears in view', () => {
+    mountApp()
+    const words = WORD_FAMILIES['water'].words.filter((word) => word !== 'water').slice(0, 20)
+    const seenFocuses = new Set<string>()
+    for (const [index, word] of words.entries()) {
+      grow(word)
+      const world = worldFromModel(buildTree('water', words.slice(0, index + 1)))
+      const newest = newestPlacement(world)
+      const view = cameraWindowOf(cameraOf())
+      expect(view.left).toBeLessThanOrEqual(newest.x)
+      expect(view.right).toBeGreaterThanOrEqual(newest.x)
+      expect(view.top).toBeLessThanOrEqual(newest.y)
+      expect(view.bottom).toBeGreaterThanOrEqual(newest.y)
+      seenFocuses.add(`${cameraOf().focusX},${cameraOf().focusY}`)
+    }
+    expect(seenFocuses.size).toBeGreaterThan(1)
+  })
+
+  it('starts a fresh day with the camera framing the Ground', () => {
+    mountApp()
+    const world = worldFromModel(buildTree('water', []))
+    const view = cameraWindowOf(cameraOf())
+    const ground = groundSpan(world)
+    expect(view.left).toBeLessThanOrEqual(ground.left)
+    expect(view.right).toBeGreaterThanOrEqual(ground.right)
+    expect(view.top).toBeLessThanOrEqual(-1)
+    expect(view.bottom).toBeGreaterThanOrEqual(0)
+  })
+
+  it('frames the whole existing Tree after a mid-day reload', () => {
+    const words = ['waterproof', 'watery', 'backwater', 'seawater']
+    const { unmount } = mountApp()
+    for (const word of words) grow(word)
+    unmount()
+
+    mountApp()
+    const view = cameraWindowOf(cameraOf())
+    const bounds = treeBounds(worldFromModel(buildTree('water', words)))
+    expect(view.left).toBeLessThanOrEqual(bounds.minX)
+    expect(view.right).toBeGreaterThanOrEqual(bounds.maxX)
+    expect(view.top).toBeLessThanOrEqual(bounds.minY)
+    expect(view.bottom).toBeGreaterThanOrEqual(bounds.maxY)
   })
 })
 

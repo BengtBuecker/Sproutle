@@ -1,21 +1,47 @@
-import { useMemo } from 'react'
+import { useEffect, useMemo, useReducer, useRef } from 'react'
 import { buildTree, ROOT_ID } from '../game/tree'
-import { groundY, groundSpan, worldFromModel, worldViewBox } from '../game/world'
-import type { WorldPlacement } from '../game/world'
+import {
+  START_CAMERA,
+  VIEW_HEIGHT,
+  VIEW_WIDTH,
+  cameraReducer,
+  groundSpan,
+  groundY,
+  worldFromModel,
+} from '../game/world'
+import type { Camera, CameraAction, WorldPlacement } from '../game/world'
 
 interface TreeProps {
   stem: string
   sprouts: readonly string[]
 }
 
-const VIEW_PAD_TOP = 30
-const VIEW_PAD_BOTTOM = 4
-
 export default function Tree({ stem, sprouts }: TreeProps) {
   const model = useMemo(() => buildTree(stem, sprouts), [stem, sprouts])
   const world = useMemo(() => worldFromModel(model), [model])
+  const worldRef = useRef(world)
+  useEffect(() => {
+    worldRef.current = world
+  })
+
+  const [camera, dispatch] = useReducer(
+    (state: Camera, action: CameraAction) => cameraReducer(state, action, worldRef.current),
+    world,
+    (initialWorld) =>
+      cameraReducer(START_CAMERA, { type: 'frame-puzzle' }, initialWorld),
+  )
+
+  const grownCount = useRef(sprouts.length)
+  useEffect(() => {
+    if (sprouts.length > grownCount.current) dispatch({ type: 'follow-growth' })
+    grownCount.current = sprouts.length
+  }, [sprouts.length])
+
+  useEffect(() => {
+    dispatch({ type: 'frame-puzzle' })
+  }, [stem])
+
   const newestSproutIndex = sprouts.length - 1
-  const viewBox = worldViewBox(world, VIEW_PAD_TOP, VIEW_PAD_BOTTOM)
 
   function renderNode(id: string, parent: WorldPlacement | null) {
     const placement = world.placements[id]
@@ -56,15 +82,21 @@ export default function Tree({ stem, sprouts }: TreeProps) {
   }
 
   const ground = groundSpan(world)
+  const transform = `translate(${VIEW_WIDTH / 2}px, ${VIEW_HEIGHT / 2}px) scale(${camera.zoom}) translate(${-camera.focusX}px, ${-camera.focusY}px)`
   return (
     <svg
       role="img"
       aria-label="Tree"
-      viewBox={`${viewBox.minX} ${viewBox.minY} ${viewBox.width} ${viewBox.height}`}
+      viewBox={`0 0 ${VIEW_WIDTH} ${VIEW_HEIGHT}`}
       className="h-full w-full"
     >
-      <line x1={ground.left} y1={groundY} x2={ground.right} y2={groundY} pathLength={1} className="ground" />
-      {renderNode(ROOT_ID, null)}
+      <g
+        className="camera-group"
+        style={{ transform, transformOrigin: '0 0', transformBox: 'view-box' }}
+      >
+        <line x1={ground.left} y1={groundY} x2={ground.right} y2={groundY} pathLength={1} className="ground" />
+        {renderNode(ROOT_ID, null)}
+      </g>
     </svg>
   )
 }
