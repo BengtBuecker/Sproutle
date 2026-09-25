@@ -7,7 +7,7 @@ afterEach(cleanup)
 
 const TODAY = '2026-09-25T15:04:05.000Z'
 const FIRST_INSTANT_AFTER_MIDNIGHT = '2026-09-26T00:00:00.000Z'
-const TOTAL = WORD_FAMILIES['water'].words.length
+const TOTAL = WORD_FAMILIES['water'].words.filter((word) => word !== 'water').length
 
 function mountApp() {
   return render(<App clock={() => new Date(TODAY)} />)
@@ -55,6 +55,14 @@ describe('App word entry', () => {
     grow('  BackWater  ')
     expect(screen.getByText(`1 of ${TOTAL}`)).toBeInTheDocument()
     expect(screen.getByText('Points: 9')).toBeInTheDocument()
+  })
+
+  it('rejects the Stem itself: it is the root, not a Sprout', () => {
+    mountApp()
+    grow('water')
+    expect(screen.getByRole('status')).toHaveTextContent('invalid')
+    expect(screen.getByText(`0 of ${TOTAL}`)).toBeInTheDocument()
+    expect(screen.getByText('Points: 0')).toBeInTheDocument()
   })
 
   it('shakes and shows "invalid" and adds nothing for a word outside the family', () => {

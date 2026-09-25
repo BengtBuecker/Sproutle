@@ -22,6 +22,7 @@ const FEEDBACK: Record<FeedbackKind, { message: string; animation: string; text:
 
 export default function App({ clock = () => new Date() }: AppProps) {
   const family = stemOfTheDay(WORD_FAMILIES, clock())
+  const findableWords = family.words.filter((word) => word !== family.stem)
   const [sprouts, setSprouts] = useState<string[]>([])
   const [draft, setDraft] = useState('')
   const [feedback, setFeedback] = useState<Feedback | null>(null)
@@ -33,7 +34,7 @@ export default function App({ clock = () => new Date() }: AppProps) {
     const word = draft.trim().toLowerCase()
     if (word.length === 0) return
     setDraft('')
-    if (!family.words.includes(word)) {
+    if (!findableWords.includes(word)) {
       setFeedback((f) => ({ kind: 'invalid', nonce: (f?.nonce ?? 0) + 1 }))
       return
     }
@@ -73,7 +74,7 @@ export default function App({ clock = () => new Date() }: AppProps) {
         )}
       </form>
       <p className="text-lg text-slate-300">
-        {sprouts.length} of {family.words.length}
+        {sprouts.length} of {findableWords.length}
       </p>
       <p className="text-lg text-slate-300">Points: {points}</p>
     </div>
