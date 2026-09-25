@@ -1,10 +1,12 @@
 import { useEffect, useMemo, useReducer, useRef } from 'react'
 import { buildTree, ROOT_ID } from '../game/tree'
 import {
+  ART_COLORS,
   START_CAMERA,
   VIEW_HEIGHT,
   VIEW_WIDTH,
   cameraReducer,
+  decorateWorld,
   groundSpan,
   groundY,
   worldFromModel,
@@ -14,11 +16,13 @@ import type { Camera, CameraAction, WorldPlacement } from '../game/world'
 interface TreeProps {
   stem: string
   sprouts: readonly string[]
+  seed: number
 }
 
-export default function Tree({ stem, sprouts }: TreeProps) {
+export default function Tree({ stem, sprouts, seed }: TreeProps) {
   const model = useMemo(() => buildTree(stem, sprouts), [stem, sprouts])
   const world = useMemo(() => worldFromModel(model), [model])
+  const art = useMemo(() => decorateWorld(world, seed), [world, seed])
   const worldRef = useRef(world)
   useEffect(() => {
     worldRef.current = world
@@ -42,35 +46,38 @@ export default function Tree({ stem, sprouts }: TreeProps) {
   }, [stem])
 
   const newestSproutIndex = sprouts.length - 1
+  const limbById = new Map(art.branchLimbs.map((limb) => [limb.nodeId, limb]))
+  const twigById = new Map(art.twigs.map((twig) => [twig.nodeId, twig]))
 
   function renderNode(id: string, parent: WorldPlacement | null) {
     const placement = world.placements[id]
-    const { node, x, y } = placement
+    const { node } = placement
     const isNew = node.sproutIndex === newestSproutIndex && node.sproutIndex >= 0
+    const limb = parent ? limbById.get(node.id) : undefined
+    const twig = node.word === null ? undefined : twigById.get(node.id)
     return (
       <g key={node.id} className={isNew ? 'grow' : undefined}>
-        {parent && (
-          <line
-            x1={parent.x}
-            y1={parent.y}
-            x2={x}
-            y2={y}
+        {limb && (
+          <path
+            d={limb.d}
             pathLength={1}
             className="branch"
+            style={{ stroke: ART_COLORS.branch, strokeWidth: limb.width }}
           />
         )}
-        {node.word ? (
+        {node.word && twig ? (
           <>
-            <circle cx={x} cy={y} r={4} className="leaf-dot" />
-            <text x={x + 8} y={y + 4} className="leaf-label">
+            <path d={twig.d} pathLength={1} className="twig" style={{ stroke: ART_COLORS.twig }} />
+            <circle cx={twig.leafX} cy={twig.leafY} r={4} className="leaf-dot" />
+            <text x={twig.labelX} y={twig.labelY} className="leaf-label">
               {node.word}
             </text>
           </>
         ) : (
           <>
-            <circle cx={x} cy={y} r={3} className="stem-dot" />
+            <circle cx={placement.x} cy={placement.y} r={3} className="stem-dot" />
             {node.kind && (
-              <text x={x + 8} y={y + 4} className="chunk-label">
+              <text x={placement.x + 8} y={placement.y + 4} className="chunk-label">
                 {node.chunk.toUpperCase()}
               </text>
             )}
@@ -94,7 +101,36 @@ export default function Tree({ stem, sprouts }: TreeProps) {
         className="camera-group"
         style={{ transform, transformOrigin: '0 0', transformBox: 'view-box' }}
       >
-        <line x1={ground.left} y1={groundY} x2={ground.right} y2={groundY} pathLength={1} className="ground" />
+        <g className="roots-in">
+          {art.roots.map((root, index) => (
+            <path
+              key={index}
+              d={root.d}
+              pathLength={1}
+              className="root"
+              style={{ stroke: ART_COLORS.root, strokeWidth: root.width }}
+            />
+          ))}
+        </g>
+        <line
+          x1={ground.left}
+          y1={groundY}
+          x2={ground.right}
+          y2={groundY}
+          pathLength={1}
+          className="ground"
+          style={{ stroke: ART_COLORS.ground }}
+        />
+        <g className="grass">
+          {art.grassTufts.map((tuft, index) => (
+            <path
+              key={index}
+              d={tuft.d}
+              className="grass-blade"
+              style={{ stroke: ART_COLORS.grass }}
+            />
+          ))}
+        </g>
         {renderNode(ROOT_ID, null)}
       </g>
     </svg>

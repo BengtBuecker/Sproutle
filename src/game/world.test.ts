@@ -7,6 +7,7 @@ import {
   ZOOM_MAX,
   cameraReducer,
   clampCamera,
+  decorateWorld,
   groundSpan,
   groundY,
   newestPlacement,
@@ -16,6 +17,72 @@ import {
 } from './world'
 import type { Camera } from './world'
 import { cameraWindowOf } from '../test/cameraTestUtils'
+
+const PATH_NUMBERS = /^M (-?[\d.]+) (-?[\d.]+) Q (-?[\d.]+) (-?[\d.]+) (-?[\d.]+) (-?[\d.]+)$/
+
+function bowOf(d: string): number {
+  const match = d.match(PATH_NUMBERS)
+  if (!match) return -1
+  const [mx, my, cx, cy, ex, ey] = match.slice(1).map(Number)
+  if ([mx, my, cx, cy, ex, ey].some(Number.isNaN)) return -1
+  const straightX = (mx + ex) / 2
+  const straightY = (my + ey) / 2
+  return Math.hypot(cx - straightX, cy - straightY)
+}
+
+describe('decorateWorld day-seeded art', () => {
+  const world = worldFromModel(buildTree('water', ['watery', 'waterproof', 'backwater']))
+
+  it('is deterministic for a given Puzzle day', () => {
+    expect(decorateWorld(world, 7)).toEqual(decorateWorld(world, 7))
+  })
+
+  it('varies the art between Puzzle days', () => {
+    expect(decorateWorld(world, 7)).not.toEqual(decorateWorld(world, 8))
+  })
+
+  it('curves every Branch into an organic limb instead of a diagram line', () => {
+    const art = decorateWorld(world, 7)
+    const edges = Object.values(world.placements).filter((p) => p.node.parent !== null)
+    expect(art.branchLimbs).toHaveLength(edges.length)
+    for (const limb of art.branchLimbs) {
+      expect(limb.d).toMatch(PATH_NUMBERS)
+      expect(bowOf(limb.d)).toBeGreaterThan(0.5)
+      expect(limb.width).toBeGreaterThan(0)
+    }
+  })
+
+  it('connects each Sprout to its Leaf with a Twig and keeps the word on the Leaf', () => {
+    const art = decorateWorld(world, 7)
+    const wordNodes = Object.values(world.placements).filter((p) => p.node.word !== null)
+    expect(art.twigs).toHaveLength(wordNodes.length)
+    for (const twig of art.twigs) {
+      const node = world.placements[twig.nodeId]
+      expect(node.node.word).toBeTruthy()
+      expect(twig.leafX).toBeGreaterThan(node.x)
+      expect(Math.hypot(twig.leafX - node.x, twig.leafY - node.y)).toBeGreaterThan(0)
+    }
+  })
+
+  it('spreads Roots beneath the Ground on a fresh day', () => {
+    const art = decorateWorld(worldFromModel(buildTree('water', [])), 7)
+    expect(art.roots.length).toBeGreaterThanOrEqual(3)
+    for (const root of art.roots) {
+      expect(root.endY).toBeGreaterThan(groundY)
+      expect(root.d).toMatch(PATH_NUMBERS)
+    }
+  })
+
+  it('sits a grass line with tufts across the Ground', () => {
+    const art = decorateWorld(world, 7)
+    expect(art.grassTufts.length).toBeGreaterThan(0)
+    const ground = groundSpan(world)
+    for (const tuft of art.grassTufts) {
+      expect(tuft.x).toBeGreaterThanOrEqual(ground.left)
+      expect(tuft.x).toBeLessThanOrEqual(ground.right)
+    }
+  })
+})
 
 describe('cameraReducer framing', () => {
   it('frames the Ground on a fresh day: stem and ground line inside the view', () => {

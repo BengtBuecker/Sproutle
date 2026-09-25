@@ -108,14 +108,14 @@ export default function App({ clock = DEFAULT_CLOCK }: AppProps) {
         points,
         found: sprouts.length,
         streak: displayedStreak,
-      }),
+      }, currentDay),
     )
   }
 
   return (
     <div className="fixed inset-0 bg-slate-900 text-slate-100">
       <div className="absolute inset-0">
-        <Tree stem={family.stem} sprouts={sprouts} />
+        <Tree stem={family.stem} sprouts={sprouts} seed={currentDay} />
       </div>
       <main className="absolute inset-0 z-10 pointer-events-none flex flex-col justify-between p-4">
         <div className="flex items-start justify-between gap-4">

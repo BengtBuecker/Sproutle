@@ -198,3 +198,177 @@ export function cameraReducer(camera: Camera, action: CameraAction, world: World
       return { ...camera, following: action.following }
   }
 }
+
+export interface BranchLimb {
+  nodeId: string
+  d: string
+  width: number
+}
+
+export interface Twig {
+  nodeId: string
+  d: string
+  leafX: number
+  leafY: number
+  labelX: number
+  labelY: number
+}
+
+export interface RootCurve {
+  d: string
+  width: number
+  endX: number
+  endY: number
+}
+
+export interface GrassTuft {
+  x: number
+  d: string
+}
+
+export interface WorldArt {
+  branchLimbs: BranchLimb[]
+  twigs: Twig[]
+  roots: RootCurve[]
+  grassTufts: GrassTuft[]
+}
+
+const MAX_BRANCH_BOW = 16
+const BRANCH_BASE_WIDTH = 7
+const BRANCH_WIDTH_PER_GENERATION = 1.2
+const BRANCH_MIN_WIDTH = 2
+const TWIG_MIN_LENGTH = 26
+const TWIG_LENGTH_RANGE = 20
+const TWIG_MIN_ANGLE_DEG = -75
+const TWIG_ANGLE_RANGE_DEG = 120
+const TWIG_BOW_RANGE = 12
+const TWIG_LABEL_GAP = 8
+const ROOT_MIN_LENGTH = 45
+const ROOT_LENGTH_RANGE = 55
+const ROOT_MIN_ANGLE_DEG = 25
+const ROOT_ANGLE_RANGE_DEG = 130
+const ROOT_BOW_RANGE = 18
+const ROOT_MIN_WIDTH = 3
+const ROOT_WIDTH_RANGE = 1.5
+const ROOT_COUNT_BASE = 3
+const ROOT_COUNT_RANGE = 3
+const GRASS_SPACING = 55
+const TUFT_MIN_HEIGHT = 5
+const TUFT_HEIGHT_RANGE = 6
+const TUFT_LEAN_RANGE = 8
+const TUFT_EDGE_PAD_SLOTS = 0.15
+const TUFT_POSITION_JITTER = 0.7
+
+export const ART_COLORS = {
+  branch: '#92400e',
+  twig: '#b45309',
+  root: '#78350f',
+  grass: '#16a34a',
+  ground: '#166534',
+} as const
+
+function mulberry32(seed: number): () => number {
+  let state = seed >>> 0
+  return () => {
+    state = (state + 0x6d2b79f5) >>> 0
+    let t = state
+    t = Math.imul(t ^ (t >>> 15), t | 1)
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61)
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296
+  }
+}
+
+function curvedPath(
+  from: { x: number; y: number },
+  to: { x: number; y: number },
+  bow: number,
+): string {
+  const midX = (from.x + to.x) / 2
+  const midY = (from.y + to.y) / 2
+  const dx = to.x - from.x
+  const dy = to.y - from.y
+  const length = Math.hypot(dx, dy) || 1
+  const controlX = midX - (dy / length) * bow
+  const controlY = midY + (dx / length) * bow
+  return `M ${from.x} ${from.y} Q ${controlX} ${controlY} ${to.x} ${to.y}`
+}
+
+export function decorateWorld(world: World, seed: number): WorldArt {
+  const random = mulberry32(seed)
+  const generationOf = new Map<string, number>()
+  for (const [generation, placements] of world.nodesByGeneration) {
+    for (const placement of placements) {
+      generationOf.set(placement.node.id, generation)
+    }
+  }
+
+  const branchLimbs: BranchLimb[] = []
+  for (const placement of Object.values(world.placements)) {
+    if (placement.node.parent === null) continue
+    const parent = world.placements[placement.node.parent]
+    const bow = (random() - 0.5) * 2 * MAX_BRANCH_BOW
+    const generation = generationOf.get(placement.node.id) ?? 0
+    branchLimbs.push({
+      nodeId: placement.node.id,
+      d: curvedPath(parent, placement, bow),
+      width: Math.max(
+        BRANCH_MIN_WIDTH,
+        BRANCH_BASE_WIDTH - generation * BRANCH_WIDTH_PER_GENERATION,
+      ),
+    })
+  }
+
+  const twigs: Twig[] = []
+  for (const placement of Object.values(world.placements)) {
+    if (placement.node.word === null) continue
+    const angle = ((TWIG_MIN_ANGLE_DEG + random() * TWIG_ANGLE_RANGE_DEG) * Math.PI) / 180
+    const length = TWIG_MIN_LENGTH + random() * TWIG_LENGTH_RANGE
+    const leafX = placement.x + Math.cos(angle) * length
+    const leafY = placement.y + Math.sin(angle) * length
+    const bow = (random() - 0.5) * TWIG_BOW_RANGE
+    twigs.push({
+      nodeId: placement.node.id,
+      d: curvedPath(placement, { x: leafX, y: leafY }, bow),
+      leafX,
+      leafY,
+      labelX: leafX + TWIG_LABEL_GAP,
+      labelY: leafY + TWIG_LABEL_GAP / 2,
+    })
+  }
+
+  const base = world.placements[ROOT_ID]
+  const rootCount = ROOT_COUNT_BASE + Math.floor(random() * ROOT_COUNT_RANGE)
+  const roots: RootCurve[] = []
+  for (let index = 0; index < rootCount; index++) {
+    const angle = ((ROOT_MIN_ANGLE_DEG + random() * ROOT_ANGLE_RANGE_DEG) * Math.PI) / 180
+    const length = ROOT_MIN_LENGTH + random() * ROOT_LENGTH_RANGE
+    const endX = base.x + Math.cos(angle) * length
+    const endY = base.y + Math.sin(angle) * length
+    const bow = (random() - 0.5) * 2 * ROOT_BOW_RANGE
+    roots.push({
+      d: curvedPath(base, { x: endX, y: endY }, bow),
+      width: ROOT_MIN_WIDTH + random() * ROOT_WIDTH_RANGE,
+      endX,
+      endY,
+    })
+  }
+
+  const ground = groundSpan(world)
+  const groundWidth = ground.right - ground.left
+  const tuftCount = Math.max(6, Math.floor(groundWidth / GRASS_SPACING))
+  const grassTufts: GrassTuft[] = []
+  for (let index = 0; index < tuftCount; index++) {
+    const x =
+      ground.left +
+      ((index + TUFT_EDGE_PAD_SLOTS + random() * TUFT_POSITION_JITTER) / tuftCount) *
+        groundWidth
+    const height = TUFT_MIN_HEIGHT + random() * TUFT_HEIGHT_RANGE
+    const lean = (random() - 0.5) * TUFT_LEAN_RANGE
+    grassTufts.push({
+      x,
+      d: `M ${x} ${groundY} q ${lean} ${-height / 2} ${lean * 1.6} ${-height}`,
+    })
+  }
+
+  return { branchLimbs, twigs, roots, grassTufts }
+}

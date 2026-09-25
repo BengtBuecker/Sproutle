@@ -303,6 +303,16 @@ describe('App layout: vertical Tree, fixed HUD', () => {
     return screen.getByRole('form', { name: 'Grow a word' }).closest('main')!
   }
 
+  it('grows the Roots in once per day load while the Ground grass line shows immediately', () => {
+    mountApp()
+    const treeSvg = screen.getByRole('img', { name: 'Tree' })
+    const roots = treeSvg.querySelector('.roots-in')
+    expect(roots).not.toBeNull()
+    expect(roots!.querySelectorAll('.grass-blade').length).toBe(0)
+    expect(treeSvg.querySelectorAll('.grass-blade').length).toBeGreaterThan(0)
+    expect(treeSvg.querySelector('.ground')).not.toBeNull()
+  })
+
   it('keeps the HUD as a fixed overlay in front of the Tree zone, page unscrollable', () => {
     mountApp()
     grow('backwater')
