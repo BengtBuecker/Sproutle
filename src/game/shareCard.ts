@@ -6,6 +6,7 @@ export interface ShareStats {
   points: number
   found: number
   streak: number
+  height: number
 }
 
 const ESCAPE: Record<string, string> = {
@@ -78,8 +79,9 @@ export function buildShareSvg(
   const model = buildTree(stem, sprouts)
   const world = worldFromModel(model)
   const art = decorateWorld(world, seed)
+  const belowGround = art.roots.reduce((max, root) => Math.max(max, root.endY), 0)
   const shiftY = HEADER + TOP_PAD + world.height
-  const totalHeight = shiftY + FOOTER
+  const totalHeight = shiftY + belowGround + FOOTER
   const ground = groundSpan(world)
   const centerX = ground.left + world.width / 2
 
@@ -91,7 +93,7 @@ export function buildShareSvg(
     `<g transform="translate(0 ${shiftY})">`,
     ...sceneShapes(world, art),
     '</g>',
-    `<text x="${centerX}" y="${totalHeight - 16}" text-anchor="middle" font-size="13" fill="#e2e8f0" font-family="system-ui, sans-serif">Points: ${stats.points} · Sprouts found: ${stats.found} · Streak: ${stats.streak}</text>`,
+    `<text x="${centerX}" y="${totalHeight - 16}" text-anchor="middle" font-size="13" fill="#e2e8f0" font-family="system-ui, sans-serif">Points: ${stats.points} · Sprouts found: ${stats.found} · Streak: ${stats.streak} · Height: ${stats.height} m</text>`,
     '</svg>',
   ].join('\n')
 }

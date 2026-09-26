@@ -115,6 +115,7 @@ export default function App({ clock = DEFAULT_CLOCK }: AppProps) {
         points,
         found: sprouts.length,
         streak: displayedStreak,
+        height,
       }, currentDay),
     )
   }

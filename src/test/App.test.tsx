@@ -249,6 +249,7 @@ describe('App shareable result', () => {
       expect(svg).toContain('backwater')
       expect(svg).toContain('Points: 9')
       expect(svg).toContain('Sprouts found: 1')
+      expect(svg).toContain('Height: 5 m')
       expect(svg).not.toContain('waterproof')
     } finally {
       clickSpy.mockRestore()
