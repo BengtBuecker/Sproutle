@@ -104,90 +104,94 @@ export default function Tree({ world, seed }: TreeProps) {
     if (dragRef.current.pointers.size < 2) dragRef.current.lastPinchDistance = null
   }
 
-  const newestSproutIndex = newestPlacement(world).node.sproutIndex
-  const limbById = new Map(art.branchLimbs.map((limb) => [limb.nodeId, limb]))
-  const twigById = new Map(art.twigs.map((twig) => [twig.nodeId, twig]))
+  const ground = groundSpan(world)
 
-  let growElementIndex = 0
-  function nextGrowDelay(): React.CSSProperties {
-    const style: React.CSSProperties = {
-      animationDelay: `${growElementIndex * STAGGER_MS}ms`,
+  const scene = useMemo(() => {
+    const newestSproutIndex = newestPlacement(world).node.sproutIndex
+    const limbById = new Map(art.branchLimbs.map((limb) => [limb.nodeId, limb]))
+    const twigById = new Map(art.twigs.map((twig) => [twig.nodeId, twig]))
+
+    let growElementIndex = 0
+    function nextGrowDelay(): React.CSSProperties {
+      const style: React.CSSProperties = {
+        animationDelay: `${growElementIndex * STAGGER_MS}ms`,
+      }
+      growElementIndex += 1
+      return style
     }
-    growElementIndex += 1
-    return style
-  }
 
-  function renderNode(id: string, parent: WorldPlacement | null) {
-    const placement = world.placements[id]
-    const { node } = placement
-    const isNew = node.sproutIndex === newestSproutIndex && node.sproutIndex >= 0
-    const limb = parent ? limbById.get(node.id) : undefined
-    const twig = node.word === null ? undefined : twigById.get(node.id)
-    return (
-      <g key={node.id} className={isNew ? 'grow' : undefined}>
-        {limb && (
-          <path
-            d={limb.d}
-            pathLength={1}
-            className="branch"
-            style={{
-              stroke: ART_COLORS.branch,
-              strokeWidth: limb.width,
-              ...(isNew ? nextGrowDelay() : {}),
-            }}
-          />
-        )}
-        {node.word && twig ? (
-          <>
+    function renderNode(id: string, parent: WorldPlacement | null) {
+      const placement = world.placements[id]
+      const { node } = placement
+      const isNew = node.sproutIndex === newestSproutIndex && node.sproutIndex >= 0
+      const limb = parent ? limbById.get(node.id) : undefined
+      const twig = node.word === null ? undefined : twigById.get(node.id)
+      return (
+        <g key={node.id} className={isNew ? 'grow' : undefined}>
+          {limb && (
             <path
-              d={twig.d}
+              d={limb.d}
               pathLength={1}
-              className="twig"
-              style={{ stroke: ART_COLORS.twig, ...(isNew ? nextGrowDelay() : {}) }}
+              className="branch"
+              style={{
+                stroke: ART_COLORS.branch,
+                strokeWidth: limb.width,
+                ...(isNew ? nextGrowDelay() : {}),
+              }}
             />
-            <circle
-              cx={twig.leafX}
-              cy={twig.leafY}
-              r={4}
-              className="leaf-dot"
-              style={{ ...(isNew ? nextGrowDelay() : {}) }}
-            />
-            <text
-              x={twig.labelX}
-              y={twig.labelY}
-              className="leaf-label"
-              style={{ ...(isNew ? nextGrowDelay() : {}) }}
-            >
-              {node.word}
-            </text>
-          </>
-        ) : (
-          <>
-            <circle
-              cx={placement.x}
-              cy={placement.y}
-              r={3}
-              className="stem-dot"
-              style={{ ...(isNew ? nextGrowDelay() : {}) }}
-            />
-            {node.kind && (
+          )}
+          {node.word && twig ? (
+            <>
+              <path
+                d={twig.d}
+                pathLength={1}
+                className="twig"
+                style={{ stroke: ART_COLORS.twig, ...(isNew ? nextGrowDelay() : {}) }}
+              />
+              <circle
+                cx={twig.leafX}
+                cy={twig.leafY}
+                r={4}
+                className="leaf-dot"
+                style={{ ...(isNew ? nextGrowDelay() : {}) }}
+              />
               <text
-                x={placement.x + 8}
-                y={placement.y + 4}
-                className="chunk-label"
+                x={twig.labelX}
+                y={twig.labelY}
+                className="leaf-label"
                 style={{ ...(isNew ? nextGrowDelay() : {}) }}
               >
-                {node.chunk.toUpperCase()}
+                {node.word}
               </text>
-            )}
-          </>
-        )}
-        {world.childOrder[id].map((childId) => renderNode(childId, placement))}
-      </g>
-    )
-  }
+            </>
+          ) : (
+            <>
+              <circle
+                cx={placement.x}
+                cy={placement.y}
+                r={3}
+                className="stem-dot"
+                style={{ ...(isNew ? nextGrowDelay() : {}) }}
+              />
+              {node.kind && (
+                <text
+                  x={placement.x + 8}
+                  y={placement.y + 4}
+                  className="chunk-label"
+                  style={{ ...(isNew ? nextGrowDelay() : {}) }}
+                >
+                  {node.chunk.toUpperCase()}
+                </text>
+              )}
+            </>
+          )}
+          {world.childOrder[id].map((childId) => renderNode(childId, placement))}
+        </g>
+      )
+    }
 
-  const ground = groundSpan(world)
+    return renderNode(ROOT_ID, null)
+  }, [world, art])
   return (
     <>
       <svg
@@ -236,7 +240,7 @@ export default function Tree({ world, seed }: TreeProps) {
               />
             ))}
           </g>
-          {renderNode(ROOT_ID, null)}
+          {scene}
         </g>
         <g className="height-scale">
           <line x1={RULER_X} y1={0} x2={RULER_X} y2={VIEW_HEIGHT} className="height-ruler" />
