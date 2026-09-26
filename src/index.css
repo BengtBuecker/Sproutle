@@ -114,7 +114,7 @@
   stroke-linecap: round;
 }
 
-.camera-group {
+.camera-group.eased {
   transition: transform 450ms ease-out;
 }
 
@@ -149,7 +149,7 @@
     animation: none;
   }
 
-  .camera-group {
+  .camera-group.eased {
     transition: none;
   }
 

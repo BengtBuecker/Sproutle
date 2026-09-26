@@ -16,9 +16,36 @@ import {
   zoomFit,
 } from './world'
 import type { Camera } from './world'
-import { cameraWindowOf } from '../test/cameraTestUtils'
+import { cameraWindowOf, expectPlacementInView } from '../test/cameraTestUtils'
 
 const PATH_NUMBERS = /^M (-?[\d.]+) (-?[\d.]+) Q (-?[\d.]+) (-?[\d.]+) (-?[\d.]+) (-?[\d.]+)$/
+
+const WIDE_WORDS = [
+  'watery',
+  'waterproof',
+  'backwater',
+  'seawater',
+  'cutwater',
+  'eyewater',
+  'dewater',
+  'rewater',
+  'unwater',
+  'waterbed',
+  'waterbird',
+  'waterboard',
+  'waterbottle',
+  'waterborne',
+  'watercolour',
+  'watercooled',
+  'watercourse',
+  'watercraft',
+  'watercross',
+  'waterdrum',
+]
+
+function wideWorld() {
+  return worldFromModel(buildTree('water', WIDE_WORDS))
+}
 
 function bowOf(d: string): number {
   const match = d.match(PATH_NUMBERS)
@@ -132,6 +159,7 @@ describe('cameraReducer framing', () => {
       focusY: 0,
       zoom: ZOOM_MAX + 5,
       following: true,
+      eased: true,
     })
     expect(camera.zoom).toBe(ZOOM_MAX)
     const zoomedOut = clampCamera(world, { ...camera, zoom: 0.001 })
@@ -146,12 +174,7 @@ describe('cameraReducer following', () => {
   it('pans so the newest Sprout appears in view while following', () => {
     let camera = cameraReducer(START_CAMERA, { type: 'frame-tree' }, before)
     camera = cameraReducer(camera, { type: 'follow-growth' }, after)
-    const view = cameraWindowOf(camera)
-    const newest = newestPlacement(after)
-    expect(view.left).toBeLessThanOrEqual(newest.x)
-    expect(view.right).toBeGreaterThanOrEqual(newest.x)
-    expect(view.top).toBeLessThanOrEqual(newest.y)
-    expect(view.bottom).toBeGreaterThanOrEqual(newest.y)
+    expectPlacementInView(camera, newestPlacement(after))
   })
 
   it('holds still when following is off and resumes after set-following', () => {
@@ -167,30 +190,7 @@ describe('cameraReducer following', () => {
   })
 
   it('follows at a fixed close-up zoom: the whole Tree is not always visible', () => {
-    const wide = worldFromModel(
-      buildTree('water', [
-        'watery',
-        'waterproof',
-        'backwater',
-        'seawater',
-        'cutwater',
-        'eyewater',
-        'dewater',
-        'rewater',
-        'unwater',
-        'waterbed',
-        'waterbird',
-        'waterboard',
-        'waterbottle',
-        'waterborne',
-        'watercolour',
-        'watercooled',
-        'watercourse',
-        'watercraft',
-        'watercross',
-        'waterdrum',
-      ]),
-    )
+    const wide = wideWorld()
     const camera = cameraReducer(START_CAMERA, { type: 'frame-tree' }, wide)
     expect(camera.zoom).toBe(zoomFit(wide))
     const followed = cameraReducer(camera, { type: 'follow-growth' }, wide)
@@ -212,36 +212,20 @@ describe('cameraReducer following', () => {
       focusY: -99_999,
       zoom: 1,
       following: true,
+      eased: true,
     })
     expect(driftCamera.focusX).toBe((bounds.minX + bounds.maxX) / 2)
     expect(driftCamera.focusY).toBe((bounds.minY + bounds.maxY) / 2)
 
-    const wide = worldFromModel(
-      buildTree('water', [
-        'watery',
-        'waterproof',
-        'backwater',
-        'seawater',
-        'cutwater',
-        'eyewater',
-        'dewater',
-        'rewater',
-        'unwater',
-        'waterbed',
-        'waterbird',
-        'waterboard',
-        'waterbottle',
-        'waterborne',
-        'watercolour',
-        'watercooled',
-        'watercourse',
-        'watercraft',
-        'watercross',
-        'waterdrum',
-      ]),
-    )
+    const wide = wideWorld()
     const wideBounds = treeBounds(wide)
-    const clamped = clampCamera(wide, { focusX: 99_999, focusY: 0, zoom: 1, following: true })
+    const clamped = clampCamera(wide, {
+      focusX: 99_999,
+      focusY: 0,
+      zoom: 1,
+      following: true,
+      eased: true,
+    })
     const view = cameraWindowOf(clamped)
     expect(view.right).toBeLessThanOrEqual(wideBounds.maxX + PAN_MARGIN)
     expect(view.left).toBeGreaterThanOrEqual(wideBounds.minX - PAN_MARGIN)
@@ -254,6 +238,87 @@ describe('cameraReducer following', () => {
     const next = cameraReducer(previous, { type: 'follow-growth' }, world)
     expect(previous).toEqual(START_CAMERA)
     expect(next).not.toBe(previous)
+  })
+})
+
+describe('cameraReducer manual control', () => {
+  it('pans by screen deltas divided by zoom and pauses auto-follow', () => {
+    const world = wideWorld()
+    const start = clampCamera(world, {
+      focusX: 700,
+      focusY: -50,
+      zoom: 1,
+      following: true,
+      eased: true,
+    })
+    const panned = cameraReducer(start, { type: 'pan', dx: 200, dy: 80 }, world)
+    expect(panned.focusX).toBeCloseTo(900)
+    expect(panned.following).toBe(false)
+    expect(panned.eased).toBe(false)
+    expect(panned.zoom).toBe(1)
+  })
+
+  it('pans vertically when the view is deeper than the screen', () => {
+    const deep = worldFromModel(buildTree('water', ['awater', 'seawater', 'seawaters']))
+    const start = clampCamera(deep, {
+      focusX: 110,
+      focusY: -176,
+      zoom: 2,
+      following: true,
+      eased: true,
+    })
+    const panned = cameraReducer(start, { type: 'pan', dx: 0, dy: 100 }, deep)
+    expect(panned.focusY).toBeCloseTo(-126)
+  })
+
+  it('zooms from screen deltas and clamps to the fitted minimum and 2.5x max', () => {
+    const world = wideWorld()
+    const start = clampCamera(world, {
+      focusX: 700,
+      focusY: -50,
+      zoom: 2,
+      following: true,
+      eased: true,
+    })
+    const zoomedIn = cameraReducer(start, { type: 'zoom', factor: 3 }, world)
+    expect(zoomedIn.zoom).toBe(ZOOM_MAX)
+    expect(zoomedIn.eased).toBe(false)
+    expect(zoomedIn.following).toBe(false)
+    const zoomedOut = cameraReducer(start, { type: 'zoom', factor: 0.001 }, world)
+    expect(zoomedOut.zoom).toBe(zoomFit(world))
+  })
+
+  it('resumes auto-follow at the follow zoom on the newest Sprout', () => {
+    const world = wideWorld()
+    const manual = clampCamera(world, {
+      focusX: 700,
+      focusY: -50,
+      zoom: 1.5,
+      following: false,
+      eased: false,
+    })
+    const resumed = cameraReducer(manual, { type: 'resume-follow' }, world)
+    expect(resumed.following).toBe(true)
+    expect(resumed.zoom).toBe(FOLLOW_ZOOM)
+    expect(resumed.eased).toBe(true)
+    const view = cameraWindowOf(resumed)
+    const newest = newestPlacement(world)
+    expect(view.left).toBeLessThanOrEqual(newest.x)
+    expect(view.right).toBeGreaterThanOrEqual(newest.x)
+    expect(view.top).toBeLessThanOrEqual(newest.y)
+    expect(view.bottom).toBeGreaterThanOrEqual(newest.y)
+  })
+
+  it('eases the automatic pans and keeps manual motion instant', () => {
+    const world = wideWorld()
+    const followed = cameraReducer(START_CAMERA, { type: 'follow-growth' }, world)
+    expect(followed.eased).toBe(true)
+    const panned = cameraReducer(followed, { type: 'pan', dx: 10, dy: 0 }, world)
+    expect(panned.eased).toBe(false)
+    const zoomed = cameraReducer(panned, { type: 'zoom', factor: 1.2 }, world)
+    expect(zoomed.eased).toBe(false)
+    const resumed = cameraReducer(zoomed, { type: 'resume-follow' }, world)
+    expect(resumed.eased).toBe(true)
   })
 })
 

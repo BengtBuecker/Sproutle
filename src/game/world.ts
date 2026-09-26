@@ -83,9 +83,16 @@ export interface Camera {
   focusY: number
   zoom: number
   following: boolean
+  eased: boolean
 }
 
-export const START_CAMERA: Camera = { focusX: 0, focusY: 0, zoom: 1, following: true }
+export const START_CAMERA: Camera = {
+  focusX: 0,
+  focusY: 0,
+  zoom: 1,
+  following: true,
+  eased: true,
+}
 
 export type CameraAction =
   | { type: 'frame-ground' }
@@ -93,6 +100,9 @@ export type CameraAction =
   | { type: 'frame-puzzle' }
   | { type: 'follow-growth' }
   | { type: 'set-following'; following: boolean }
+  | { type: 'pan'; dx: number; dy: number }
+  | { type: 'zoom'; factor: number }
+  | { type: 'resume-follow' }
 
 export interface Bounds {
   minX: number
@@ -158,6 +168,7 @@ function frameGround(world: World, camera: Camera): Camera {
     focusY: groundY,
     zoom: 1,
     following: true,
+    eased: true,
   })
 }
 
@@ -169,6 +180,19 @@ function frameTree(world: World, camera: Camera): Camera {
     focusY: (bounds.minY + bounds.maxY) / 2,
     zoom: zoomFit(world),
     following: true,
+    eased: true,
+  })
+}
+
+function followNewestGrowth(world: World, camera: Camera, following: boolean): Camera {
+  const target = newestPlacement(world)
+  return clampCamera(world, {
+    ...camera,
+    focusX: target.x,
+    focusY: target.y,
+    zoom: FOLLOW_ZOOM,
+    following,
+    eased: true,
   })
 }
 
@@ -186,14 +210,25 @@ export function cameraReducer(camera: Camera, action: CameraAction, world: World
     }
     case 'follow-growth': {
       if (!camera.following) return camera
-      const target = newestPlacement(world)
+      return followNewestGrowth(world, camera, true)
+    }
+    case 'pan':
       return clampCamera(world, {
         ...camera,
-        focusX: target.x,
-        focusY: target.y,
-        zoom: FOLLOW_ZOOM,
+        focusX: camera.focusX + action.dx / camera.zoom,
+        focusY: camera.focusY + action.dy / camera.zoom,
+        following: false,
+        eased: false,
       })
-    }
+    case 'zoom':
+      return clampCamera(world, {
+        ...camera,
+        zoom: camera.zoom * action.factor,
+        following: false,
+        eased: false,
+      })
+    case 'resume-follow':
+      return followNewestGrowth(world, camera, true)
     case 'set-following':
       return { ...camera, following: action.following }
   }

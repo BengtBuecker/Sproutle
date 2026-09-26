@@ -4,12 +4,14 @@ import App from '../App'
 import { WORD_FAMILIES } from '../data/wordFamilies'
 import { buildTree } from '../game/tree'
 import {
+  ZOOM_MAX,
   groundSpan,
   newestPlacement,
   treeBounds,
   worldFromModel,
+  zoomFit,
 } from '../game/world'
-import { cameraWindowOf } from './cameraTestUtils'
+import { cameraWindowOf, expectPlacementInView } from './cameraTestUtils'
 import type { CameraView } from './cameraTestUtils'
 
 function cameraOf(): CameraView {
@@ -424,6 +426,74 @@ describe('App layout: vertical Tree, fixed HUD', () => {
     expect(view.right).toBeGreaterThanOrEqual(bounds.maxX)
     expect(view.top).toBeLessThanOrEqual(bounds.minY)
     expect(view.bottom).toBeGreaterThanOrEqual(bounds.maxY)
+  })
+})
+
+describe('App manual camera control', () => {
+  it('pans with the mouse wheel and pauses auto-follow until the follow control resumes it', () => {
+    mountApp()
+    const words = WORD_FAMILIES['water'].words.filter((word) => word !== 'water').slice(0, 18)
+    for (const word of words.slice(0, 16)) grow(word)
+    const before = cameraOf()
+    fireEvent.wheel(tree(), { deltaY: 240 })
+    expect(cameraOf().focusY).toBeGreaterThan(before.focusY)
+    const followButton = screen.getByRole('button', { name: 'Follow the Tree' })
+    expect(followButton.tagName).toBe('BUTTON')
+    expect(followButton.tabIndex).toBeGreaterThanOrEqual(0)
+    const frozen = cameraOf()
+    grow(words[16])
+    expect(cameraOf()).toEqual(frozen)
+    fireEvent.click(followButton)
+    expect(screen.queryByRole('button', { name: 'Follow the Tree' })).not.toBeInTheDocument()
+    expectPlacementInView(cameraOf(), newestPlacement(worldFromModel(buildTree('water', [...words, words[16]]))))
+    grow(words[17])
+    expectPlacementInView(
+      cameraOf(),
+      newestPlacement(worldFromModel(buildTree('water', [...words, words[16], words[17]]))),
+    )
+  })
+
+  it('zooms with ctrl+wheel, clamped to the fitted minimum and 2.5x max', () => {
+    mountApp()
+    const words = ['waterproof', 'watery', 'backwater']
+    for (const word of words) grow(word)
+    for (let index = 0; index < 8; index++) {
+      fireEvent.wheel(tree(), { deltaY: -240, ctrlKey: true })
+    }
+    expect(cameraOf().zoom).toBe(ZOOM_MAX)
+    for (let index = 0; index < 15; index++) {
+      fireEvent.wheel(tree(), { deltaY: 240, ctrlKey: true })
+    }
+    expect(cameraOf().zoom).toBe(zoomFit(worldFromModel(buildTree('water', words))))
+  })
+
+  it('pans by dragging the Tree', () => {
+    mountApp()
+    const words = ['waterproof', 'watery', 'backwater', 'seawater', 'cutwater']
+    for (const word of words) grow(word)
+    fireEvent.wheel(tree(), { deltaY: -240, ctrlKey: true })
+    fireEvent.wheel(tree(), { deltaY: -240, ctrlKey: true })
+    const before = cameraOf()
+    expect(before.zoom).toBe(ZOOM_MAX)
+    fireEvent.pointerDown(tree(), { pointerId: 1, clientX: 500, clientY: 500 })
+    fireEvent.pointerMove(tree(), { pointerId: 1, clientX: 600, clientY: 440 })
+    expect(cameraOf().focusX).toBeLessThan(before.focusX)
+    expect(cameraOf().focusY).toBeGreaterThan(before.focusY)
+    expect(screen.getByRole('button', { name: 'Follow the Tree' })).toBeInTheDocument()
+    fireEvent.pointerUp(tree(), { pointerId: 1 })
+  })
+
+  it('zooms by pinching', () => {
+    mountApp()
+    grow('waterproof')
+    fireEvent.pointerDown(tree(), { pointerId: 1, clientX: 100, clientY: 100 })
+    fireEvent.pointerDown(tree(), { pointerId: 2, clientX: 200, clientY: 100 })
+    const before = cameraOf().zoom
+    fireEvent.pointerMove(tree(), { pointerId: 1, clientX: 50, clientY: 100 })
+    fireEvent.pointerMove(tree(), { pointerId: 2, clientX: 250, clientY: 100 })
+    expect(cameraOf().zoom).toBeGreaterThan(before)
+    fireEvent.pointerUp(tree(), { pointerId: 1 })
+    fireEvent.pointerUp(tree(), { pointerId: 2 })
   })
 })
 
