@@ -195,6 +195,7 @@ describe('cameraReducer following', () => {
     expect(camera.zoom).toBe(zoomFit(wide))
     const followed = cameraReducer(camera, { type: 'follow-growth' }, wide)
     expect(followed.zoom).toBe(FOLLOW_ZOOM)
+    expect(followed.zoom).toBeGreaterThan(1)
     const view = cameraWindowOf(followed)
     const bounds = treeBounds(wide)
     const treeWiderThanView = bounds.maxX - bounds.minX > view.right - view.left

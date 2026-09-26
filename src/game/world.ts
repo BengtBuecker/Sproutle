@@ -71,7 +71,7 @@ export function groundSpan(world: World): { left: number; right: number } {
 export const VIEW_WIDTH = 1200
 export const VIEW_HEIGHT = 800
 export const ZOOM_MAX = 2.5
-export const FOLLOW_ZOOM = 1
+export const FOLLOW_ZOOM = 2
 
 export const PAN_MARGIN = 120
 const BOUNDS_PAD_LEFT = 10
