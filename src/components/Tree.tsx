@@ -39,6 +39,8 @@ const FINALE_COLORS = {
   crown: '#34d399',
 } as const
 
+const FOLIAGE_MAX_RENDERED = 220
+
 export default function Tree({ world, seed, complete = false }: TreeProps) {
   const art = useMemo(() => decorateWorld(world, seed), [world, seed])
   const worldRef = useRef(world)
@@ -157,7 +159,7 @@ export default function Tree({ world, seed, complete = false }: TreeProps) {
               <circle
                 cx={twig.leafX}
                 cy={twig.leafY}
-                r={4}
+                r={twig.blobR}
                 className="leaf-dot"
                 style={{ ...(isNew ? nextGrowDelay() : {}) }}
               />
@@ -248,6 +250,26 @@ export default function Tree({ world, seed, complete = false }: TreeProps) {
               />
             ))}
           </g>
+          <path
+            d={art.trunk.d}
+            pathLength={1}
+            className="trunk"
+            style={{ stroke: ART_COLORS.trunk, strokeWidth: art.trunk.width }}
+          />
+          {art.foliage.length > 0 && (
+            <g className="foliage">
+              {art.foliage.slice(0, FOLIAGE_MAX_RENDERED).map((blob, index) => (
+                <circle
+                  key={index}
+                  cx={blob.cx}
+                  cy={blob.cy}
+                  r={blob.r}
+                  className={index % 4 === 0 ? 'foliage-blob back' : 'foliage-blob'}
+                  style={{ fill: index % 4 === 0 ? ART_COLORS.foliageBack : ART_COLORS.foliage }}
+                />
+              ))}
+            </g>
+          )}
           {scene}
           {finale && (
             <g className="finale">
@@ -305,7 +327,7 @@ export default function Tree({ world, seed, complete = false }: TreeProps) {
         <button
           type="button"
           onClick={() => dispatch({ type: 'resume-follow' })}
-          className="fixed bottom-6 left-6 z-20 rounded-full bg-emerald-500 px-4 py-2 text-sm font-semibold text-slate-900 hover:bg-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-300"
+          className="fixed bottom-6 left-6 z-20 rounded-full bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-300"
         >
           Follow the Tree
         </button>

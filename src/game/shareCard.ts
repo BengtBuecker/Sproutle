@@ -40,6 +40,12 @@ function sceneShapes(world: World, art: WorldArt): string[] {
       `<path d="${tuft.d}" stroke="${ART_COLORS.grass}" stroke-width="1.5" fill="none" stroke-linecap="round" />`,
     )
   }
+  shapes.push(
+    `<path d="${art.trunk.d}" stroke="${ART_COLORS.trunk}" stroke-width="${art.trunk.width}" fill="none" stroke-linecap="round" />`,
+  )
+  for (const blob of art.foliage) {
+    shapes.push(`<circle cx="${blob.cx}" cy="${blob.cy}" r="${blob.r}" fill="${ART_COLORS.foliage}" opacity="0.85" />`)
+  }
   for (const limb of art.branchLimbs) {
     shapes.push(
       `<path d="${limb.d}" stroke="${ART_COLORS.branch}" stroke-width="${limb.width}" fill="none" stroke-linecap="round" />`,
@@ -54,15 +60,15 @@ function sceneShapes(world: World, art: WorldArt): string[] {
       shapes.push(
         `<path d="${twig.d}" stroke="${ART_COLORS.twig}" stroke-width="1.5" fill="none" stroke-linecap="round" />`,
       )
-      shapes.push(`<circle cx="${twig.leafX}" cy="${twig.leafY}" r="4" fill="#4ade80" />`)
+      shapes.push(`<circle cx="${twig.leafX}" cy="${twig.leafY}" r="${twig.blobR}" fill="#22c55e" />`)
       shapes.push(
-        `<text x="${twig.labelX}" y="${twig.labelY}" font-size="13" fill="#e2e8f0">${escapeText(node.word)}</text>`,
+        `<text x="${twig.labelX}" y="${twig.labelY}" font-size="13" fill="#44403c">${escapeText(node.word)}</text>`,
       )
     } else {
-      shapes.push(`<circle cx="${x}" cy="${y}" r="3" fill="#a3e635" />`)
+      shapes.push(`<circle cx="${x}" cy="${y}" r="3" fill="#166534" />`)
       if (node.kind) {
         shapes.push(
-          `<text x="${x + 8}" y="${y + 4}" font-size="10" letter-spacing="0.05em" fill="#94a3b8">${escapeText(node.chunk.toUpperCase())}</text>`,
+          `<text x="${x + 8}" y="${y + 4}" font-size="10" letter-spacing="0.05em" fill="#78716c">${escapeText(node.chunk.toUpperCase())}</text>`,
         )
       }
     }
@@ -87,13 +93,13 @@ export function buildShareSvg(
 
   return [
     `<svg xmlns="http://www.w3.org/2000/svg" width="${world.width}" height="${totalHeight}" viewBox="${ground.left} 0 ${world.width} ${totalHeight}" role="img" aria-label="Sproutle share card">`,
-    `<rect x="${ground.left}" y="0" width="${world.width}" height="${totalHeight}" fill="#0f172a" />`,
-    `<text x="${centerX}" y="28" text-anchor="middle" font-size="18" font-weight="bold" fill="#4ade80" font-family="system-ui, sans-serif">Sproutle</text>`,
-    `<text x="${centerX}" y="48" text-anchor="middle" font-size="12" fill="#94a3b8" font-family="system-ui, sans-serif">Stem: ${escapeText(stem.toUpperCase())}</text>`,
+    `<rect x="${ground.left}" y="0" width="${world.width}" height="${totalHeight}" fill="#fafaf9" />`,
+    `<text x="${centerX}" y="28" text-anchor="middle" font-size="18" font-weight="bold" fill="#16a34a" font-family="system-ui, sans-serif">Sproutle</text>`,
+    `<text x="${centerX}" y="48" text-anchor="middle" font-size="12" fill="#78716c" font-family="system-ui, sans-serif">Stem: ${escapeText(stem.toUpperCase())}</text>`,
     `<g transform="translate(0 ${shiftY})">`,
     ...sceneShapes(world, art),
     '</g>',
-    `<text x="${centerX}" y="${totalHeight - 16}" text-anchor="middle" font-size="13" fill="#e2e8f0" font-family="system-ui, sans-serif">Points: ${stats.points} · Sprouts found: ${stats.found} · Streak: ${stats.streak} · Height: ${stats.height} m</text>`,
+    `<text x="${centerX}" y="${totalHeight - 16}" text-anchor="middle" font-size="13" fill="#44403c" font-family="system-ui, sans-serif">Points: ${stats.points} · Sprouts found: ${stats.found} · Streak: ${stats.streak} · Height: ${stats.height} m</text>`,
     '</svg>',
   ].join('\n')
 }

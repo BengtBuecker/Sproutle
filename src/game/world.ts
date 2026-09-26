@@ -289,6 +289,7 @@ export interface BranchLimb {
 export interface Twig {
   nodeId: string
   d: string
+  blobR: number
   leafX: number
   leafY: number
   labelX: number
@@ -307,11 +308,24 @@ export interface GrassTuft {
   d: string
 }
 
+export interface TrunkShape {
+  d: string
+  width: number
+}
+
+export interface FoliageBlob {
+  cx: number
+  cy: number
+  r: number
+}
+
 export interface WorldArt {
   branchLimbs: BranchLimb[]
   twigs: Twig[]
   roots: RootCurve[]
   grassTufts: GrassTuft[]
+  trunk: TrunkShape
+  foliage: FoliageBlob[]
 }
 
 const MAX_BRANCH_BOW = 16
@@ -333,12 +347,21 @@ const ROOT_MIN_WIDTH = 3
 const ROOT_WIDTH_RANGE = 1.5
 const ROOT_COUNT_BASE = 3
 const ROOT_COUNT_RANGE = 3
-const GRASS_SPACING = 55
-const TUFT_MIN_HEIGHT = 5
-const TUFT_HEIGHT_RANGE = 6
-const TUFT_LEAN_RANGE = 8
-const TUFT_EDGE_PAD_SLOTS = 0.15
-const TUFT_POSITION_JITTER = 0.7
+const GRASS_SPACING = 30
+const TUFT_MIN_HEIGHT = 7
+const TUFT_HEIGHT_RANGE = 12
+const TUFT_LEAN_RANGE = 12
+const TUFT_BLADE_MIN = 3
+const TUFT_BLADE_RANGE = 5
+const TUFT_EDGE_PAD_SLOTS = 0.02
+const TUFT_POSITION_JITTER = 0.62
+
+const TRUNK_BASE_WIDTH = 16
+const TRUNK_BOW = 10
+
+const FOLIAGE_BASE_RADIUS = 13
+const FOLIAGE_GROWTH_PER_GENERATION = 3.2
+const FOLIAGE_MAX_RADIUS = 34
 
 const CROWN_MAX_LIMBS = 12
 const CROWN_MIN_LENGTH = 40
@@ -356,11 +379,14 @@ const STAR_DELAY_BASE = 400
 const STAR_DELAY_STEP = 40
 
 export const ART_COLORS = {
-  branch: '#92400e',
-  twig: '#b45309',
-  root: '#78350f',
-  grass: '#16a34a',
-  ground: '#166534',
+  branch: '#8a5a3b',
+  twig: '#4a7c3f',
+  root: '#a1724f',
+  grass: '#79b45d',
+  ground: '#5f9448',
+  trunk: '#7a4a2b',
+  foliage: '#6fbf63',
+  foliageBack: '#4e9a4c',
 } as const
 
 function mulberry32(seed: number): () => number {
@@ -425,11 +451,39 @@ export function decorateWorld(world: World, seed: number): WorldArt {
     twigs.push({
       nodeId: placement.node.id,
       d: curvedPath(placement, { x: leafX, y: leafY }, bow),
+      blobR: 5 + random() * 3,
       leafX,
       leafY,
       labelX: leafX + TWIG_LABEL_GAP,
       labelY: leafY + TWIG_LABEL_GAP / 2,
     })
+  }
+
+  const generations = Math.max(1, world.maxGeneration)
+  const topY = groundY - generations * GENERATION_GAP
+  const trunk: TrunkShape = {
+    d: `M 0 ${groundY} C ${TRUNK_BOW} ${(groundY + topY) / 2} ${-TRUNK_BOW} ${topY - GENERATION_GAP / 4} 0 ${topY - GENERATION_GAP / 4}`,
+    width: TRUNK_BASE_WIDTH,
+  }
+
+  const foliage: FoliageBlob[] = []
+  let foliageIndex = 0
+  for (const placement of Object.values(world.placements)) {
+    if (placement.node.word === null) continue
+    const distanceFromTop = generations - (generationOf.get(placement.node.id) ?? generations)
+    const radius = Math.max(
+      8,
+      FOLIAGE_BASE_RADIUS +
+        FOLIAGE_GROWTH_PER_GENERATION * distanceFromTop -
+        FOLIAGE_GROWTH_PER_GENERATION,
+    )
+    foliage.push({
+      cx: placement.x + (foliageIndex % 3 - 1) * 6,
+      cy: placement.y + ((foliageIndex % 2) * 2 - 1) * 4,
+      r: Math.min(FOLIAGE_MAX_RADIUS, radius),
+    })
+    foliageIndex += 1
+    if (foliage.length > 180) break
   }
 
   const base = world.placements[ROOT_ID]
@@ -458,15 +512,18 @@ export function decorateWorld(world: World, seed: number): WorldArt {
       ground.left +
       ((index + TUFT_EDGE_PAD_SLOTS + random() * TUFT_POSITION_JITTER) / tuftCount) *
         groundWidth
-    const height = TUFT_MIN_HEIGHT + random() * TUFT_HEIGHT_RANGE
-    const lean = (random() - 0.5) * TUFT_LEAN_RANGE
-    grassTufts.push({
-      x,
-      d: `M ${x} ${groundY} q ${lean} ${-height / 2} ${lean * 1.6} ${-height}`,
-    })
+    const blades = TUFT_BLADE_MIN + Math.floor(random() * TUFT_BLADE_RANGE)
+    let d = ''
+    for (let blade = 0; blade < blades; blade++) {
+      const height = TUFT_MIN_HEIGHT + random() * TUFT_HEIGHT_RANGE
+      const lean = (random() - 0.5) * TUFT_LEAN_RANGE
+      const baseOffset = (blade - (blades - 1) / 2) * 3
+      d += `M ${x + baseOffset} ${groundY} q ${lean} ${-height / 2} ${lean * 1.6} ${-height} `
+    }
+    grassTufts.push({ x, d: d.trim() })
   }
 
-  return { branchLimbs, twigs, roots, grassTufts }
+  return { branchLimbs, twigs, roots, grassTufts, trunk, foliage }
 }
 
 export interface CrownLimb {

@@ -77,6 +77,19 @@
   stroke-linecap: round;
 }
 
+.trunk {
+  fill: none;
+  stroke-linecap: round;
+}
+
+.foliage-blob {
+  opacity: 0.85;
+}
+
+.foliage-blob.back {
+  opacity: 0.6;
+}
+
 .twig {
   fill: none;
   stroke-width: 1.5;
@@ -127,7 +140,7 @@
 }
 
 .star {
-  fill: var(--color-slate-200);
+  fill: var(--color-amber-300);
   animation:
     pop 0.4s ease-out backwards,
     twinkle 1.8s ease-in-out infinite;
@@ -138,20 +151,20 @@
 }
 
 .height-ruler {
-  stroke: var(--color-slate-600);
+  stroke: var(--color-stone-400);
 }
 
 .height-tick-major {
-  stroke: var(--color-slate-400);
+  stroke: var(--color-stone-500);
   stroke-width: 2;
 }
 
 .height-tick-minor {
-  stroke: var(--color-slate-500);
+  stroke: var(--color-stone-400);
 }
 
 .height-tick-label {
-  fill: var(--color-slate-300);
+  fill: var(--color-stone-500);
   font-size: 14px;
 }
 
@@ -165,20 +178,20 @@
 }
 
 .leaf-dot {
-  fill: var(--color-green-400);
+  fill: var(--color-green-500);
 }
 
 .stem-dot {
-  fill: var(--color-lime-400);
+  fill: var(--color-green-800);
 }
 
 .leaf-label {
-  fill: var(--color-slate-200);
+  fill: var(--color-stone-800);
   font-size: 13px;
 }
 
 .chunk-label {
-  fill: var(--color-slate-400);
+  fill: var(--color-stone-500);
   font-size: 10px;
   letter-spacing: 0.05em;
 }

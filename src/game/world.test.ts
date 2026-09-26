@@ -107,13 +107,29 @@ describe('decorateWorld day-seeded art', () => {
     }
   })
 
-  it('sits a grass line with tufts across the Ground', () => {
+  it('sits a dense grass line with multi-blade tufts across the full Ground', () => {
     const art = decorateWorld(world, 7)
     expect(art.grassTufts.length).toBeGreaterThan(0)
     const ground = groundSpan(world)
     for (const tuft of art.grassTufts) {
       expect(tuft.x).toBeGreaterThanOrEqual(ground.left)
       expect(tuft.x).toBeLessThanOrEqual(ground.right)
+    }
+    const densestSpacing = ground.right - ground.left
+    expect(art.grassTufts.length).toBeGreaterThanOrEqual(Math.floor(densestSpacing / 40))
+    for (const tuft of art.grassTufts) {
+      const bladeStarts = tuft.d.match(/M /g)
+      expect(bladeStarts!.length).toBeGreaterThanOrEqual(3)
+    }
+  })
+
+  it('grows a trunk from the Ground up through the Tree and a leafy canopy', () => {
+    const art = decorateWorld(world, 7)
+    expect(art.trunk.width).toBeGreaterThan(0)
+    expect(art.trunk.d).toMatch(/^M /)
+    expect(art.foliage.length).toBeGreaterThan(0)
+    for (const blob of art.foliage) {
+      expect(blob.r).toBeGreaterThan(0)
     }
   })
 })

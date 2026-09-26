@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { ART_COLORS } from './world'
 import { buildShareSvg } from './shareCard'
 import { buildTree } from './tree'
 import { decorateWorld, worldFromModel } from './world'
@@ -37,17 +38,19 @@ describe('buildShareSvg', () => {
 
   it('colors the Stem root differently from grown leaves', () => {
     const svg = buildShareSvg('water', ['watery'], STATS, 7)
-    expect(svg).toContain('fill="#a3e635"')
-    expect(svg).toContain('fill="#4ade80"')
+    expect(svg).toContain('fill="#166534"')
+    expect(svg).toContain('fill="#22c55e"')
   })
 
-  it('renders the new art style: Branches, Twigs, Leaves, Roots and the grass line', () => {
+  it('renders the new art style: trunk, foliage, Branches, Twigs, Leaves, Roots and the grass line', () => {
     const svg = buildShareSvg('water', ['backwater'], STATS, 7)
-    expect(svg).toContain('stroke="#92400e"')
-    expect(svg).toContain('stroke="#b45309"')
-    expect(svg).toContain('stroke="#78350f"')
-    expect(svg).toContain('stroke="#16a34a"')
-    expect(svg).toContain('stroke="#166534"')
+    expect(svg).toContain('stroke="#8a5a3b"')
+    expect(svg).toContain('stroke="#4a7c3f"')
+    expect(svg).toContain('stroke="#a1724f"')
+    expect(svg).toContain('stroke="#79b45d"')
+    expect(svg).toContain('stroke="#5f9448"')
+    expect(svg).toContain(`stroke="${ART_COLORS.trunk}"`)
+    expect(svg).toContain(`fill="${ART_COLORS.foliage}"`)
   })
 
   it('is deterministic for a given Puzzle day and varies between days', () => {

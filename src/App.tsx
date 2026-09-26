@@ -22,8 +22,8 @@ interface Feedback {
 }
 
 const FEEDBACK: Record<FeedbackKind, { message: string; animation: string; text: string }> = {
-  invalid: { message: 'invalid', animation: 'shake', text: 'text-rose-400' },
-  duplicate: { message: 'already sprouted', animation: 'pulse-once', text: 'text-sky-300' },
+  invalid: { message: 'invalid', animation: 'shake', text: 'text-rose-600' },
+  duplicate: { message: 'already sprouted', animation: 'pulse-once', text: 'text-sky-600' },
 }
 
 const DEFAULT_CLOCK: Clock = () => new Date()
@@ -136,16 +136,16 @@ export default function App({ clock = DEFAULT_CLOCK }: AppProps) {
   }
 
   return (
-    <div className="fixed inset-0 bg-slate-900 text-slate-100">
+    <div className="fixed inset-0 bg-white text-stone-900">
       <div className="absolute inset-0">
         <Tree world={world} seed={currentDay} complete={isComplete} />
       </div>
       {isComplete && !bannerDismissed && (
         <aside
           role="status"
-          className="banner-in pointer-events-auto absolute left-1/2 top-24 z-20 flex -translate-x-1/2 flex-col items-center gap-2 rounded-lg bg-slate-800 px-5 py-4 shadow-xl"
+          className="banner-in pointer-events-auto absolute left-1/2 top-24 z-20 flex -translate-x-1/2 flex-col items-center gap-2 rounded-lg bg-white px-5 py-4 text-stone-900 shadow-xl ring-1 ring-stone-200"
         >
-          <p className="text-sm font-semibold text-emerald-300">
+          <p className="text-sm font-semibold text-emerald-700">
             All {findableWords.length} Sprouts found — the Tree is Complete!
           </p>
           <div className="flex gap-2">
@@ -153,7 +153,7 @@ export default function App({ clock = DEFAULT_CLOCK }: AppProps) {
               type="button"
               onClick={share}
               autoFocus
-              className="rounded-full bg-emerald-500 px-5 py-2 text-sm font-semibold text-slate-900 hover:bg-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-300"
+              className="rounded-full bg-emerald-600 px-5 py-2 text-sm font-semibold text-white hover:bg-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-300"
             >
               Share your Tree
             </button>
@@ -161,7 +161,7 @@ export default function App({ clock = DEFAULT_CLOCK }: AppProps) {
               type="button"
               onClick={() => setBannerDismissed(true)}
               aria-label="Dismiss"
-              className="rounded-full bg-slate-700 px-5 py-2 text-sm font-semibold text-slate-100 hover:bg-slate-600 focus:outline-none focus:ring-2 focus:ring-slate-400"
+              className="rounded-full bg-stone-200 px-5 py-2 text-sm font-semibold text-stone-800 hover:bg-stone-300 focus:outline-none focus:ring-2 focus:ring-stone-400"
             >
               Dismiss
             </button>
@@ -171,11 +171,11 @@ export default function App({ clock = DEFAULT_CLOCK }: AppProps) {
       <main className="absolute inset-0 z-10 pointer-events-none flex flex-col justify-between p-4">
         <div className="flex items-start justify-between gap-4">
           <div>
-            <h1 className="text-2xl sm:text-3xl font-bold text-slate-100">Sproutle</h1>
-            <p className="mt-2 text-xs uppercase tracking-widest text-slate-400">Stem</p>
+            <h1 className="text-2xl sm:text-3xl font-bold text-stone-900">Sproutle</h1>
+            <p className="mt-2 text-xs uppercase tracking-widest text-stone-500">Stem</p>
             <h2 className="text-3xl sm:text-5xl font-bold tracking-wide">{family.stem}</h2>
           </div>
-          <div className="text-right text-base sm:text-lg text-slate-300">
+          <div className="text-right text-base sm:text-lg text-stone-700">
             <p>
               {sprouts.length} of {findableWords.length}
             </p>
@@ -196,7 +196,7 @@ export default function App({ clock = DEFAULT_CLOCK }: AppProps) {
                 aria-label="Grow a word"
                 value={draft}
                 onChange={(event) => setDraft(event.target.value)}
-                className="rounded bg-slate-800 px-4 py-2 text-center text-xl sm:text-2xl tracking-wide text-slate-100 focus:outline-none focus:ring-2 focus:ring-emerald-400"
+                className="rounded bg-white px-4 py-2 text-center text-xl sm:text-2xl tracking-wide text-stone-900 shadow-sm ring-1 ring-stone-300 focus:outline-none focus:ring-2 focus:ring-emerald-500"
               />
             </div>
             {feedback && (
@@ -208,7 +208,7 @@ export default function App({ clock = DEFAULT_CLOCK }: AppProps) {
           <button
             type="button"
             onClick={share}
-            className="rounded-full bg-emerald-500 px-5 py-2 text-sm sm:text-base font-semibold text-slate-900 hover:bg-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-300"
+            className="rounded-full bg-emerald-600 px-5 py-2 text-sm sm:text-base font-semibold text-white hover:bg-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-300"
           >
             Share result
           </button>
