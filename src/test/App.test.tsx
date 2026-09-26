@@ -3,6 +3,7 @@ import { afterEach, describe, it, expect, vi } from 'vitest'
 import App from '../App'
 import { WORD_FAMILIES } from '../data/wordFamilies'
 import { buildTree } from '../game/tree'
+import { utcDayNumber } from '../game/stemOfTheDay'
 import {
   ZOOM_MAX,
   groundSpan,
@@ -31,6 +32,15 @@ const TODAY = '2026-09-25T15:04:05.000Z'
 const FIRST_INSTANT_AFTER_MIDNIGHT = '2026-09-26T00:00:00.000Z'
 const TOTAL = WORD_FAMILIES['water'].words.filter((word) => word !== 'water').length
 const TOTAL_WIND = WORD_FAMILIES['wind'].words.filter((word) => word !== 'wind').length
+const WATER_WORDS = WORD_FAMILIES['water'].words.filter((word) => word !== 'water')
+const WATER_DAY = utcDayNumber(new Date(TODAY))
+
+function seedProgress(sprouts: string[]) {
+  localStorage.setItem(
+    'sproutle:progress',
+    JSON.stringify({ dayNumber: WATER_DAY, stem: 'water', sprouts }),
+  )
+}
 
 function mountApp() {
   return render(<App clock={() => new Date(TODAY)} />)
@@ -560,6 +570,86 @@ describe('App manual camera control', () => {
     expect(cameraOf().zoom).toBeGreaterThan(before)
     fireEvent.pointerUp(tree(), { pointerId: 1 })
     fireEvent.pointerUp(tree(), { pointerId: 2 })
+  })
+})
+
+describe('App completion finale', () => {
+  it('derives Complete only when every findable Sprout of the Word family has been grown', () => {
+    seedProgress(WATER_WORDS.slice(0, -1))
+    mountApp()
+    expect(screen.getByText(`${TOTAL - 1} of ${TOTAL}`)).toBeInTheDocument()
+    expect(screen.queryByRole('status')).not.toBeInTheDocument()
+    expect(tree().querySelector('.finale')).toBeNull()
+  })
+
+  it('plays the finale on completion: crown extends skyward, stars appear, banner shows', () => {
+    seedProgress(WATER_WORDS)
+    mountApp()
+    const finale = tree().querySelector('.finale')!
+    expect(finale).not.toBeNull()
+    expect(finale.querySelectorAll('.skyward').length).toBeGreaterThan(0)
+    expect(finale.querySelectorAll('.star').length).toBeGreaterThan(0)
+    const banner = screen.getByRole('status')
+    expect(banner).toHaveTextContent('Complete')
+    expect(within(banner).getByRole('button', { name: 'Share your Tree' }).tagName).toBe('BUTTON')
+    expect(within(banner).getByRole('button', { name: 'Dismiss' }).tagName).toBe('BUTTON')
+    expect(within(banner).getByRole('button', { name: 'Share your Tree' }).tabIndex).toBeGreaterThanOrEqual(0)
+    expect(within(banner).getByRole('button', { name: 'Dismiss' }).tabIndex).toBeGreaterThanOrEqual(0)
+  })
+
+  it('dismisses the banner by button and by Escape while the Tree keeps its finale', () => {
+    seedProgress(WATER_WORDS)
+    const { unmount } = mountApp()
+    fireEvent.click(screen.getByRole('button', { name: 'Dismiss' }))
+    expect(screen.queryByRole('status')).not.toBeInTheDocument()
+    expect(tree().querySelector('.finale')).not.toBeNull()
+    unmount()
+
+    mountApp()
+    fireEvent.keyDown(window, { key: 'Escape' })
+    expect(screen.queryByRole('status')).not.toBeInTheDocument()
+    expect(tree().querySelector('.finale')).not.toBeNull()
+  })
+
+  it('brings the banner back on every load of a completed day', () => {
+    seedProgress(WATER_WORDS)
+    const { unmount } = mountApp()
+    fireEvent.click(screen.getByRole('button', { name: 'Dismiss' }))
+    expect(screen.queryByRole('status')).not.toBeInTheDocument()
+    unmount()
+
+    mountApp()
+    expect(screen.getByRole('status')).toBeInTheDocument()
+    expect(tree().querySelector('.finale')).not.toBeNull()
+  })
+
+  it('shares the completed Tree from the banner call-to-action', () => {
+    seedProgress(WATER_WORDS)
+    mountApp()
+    const created: Blob[] = []
+    const savedCreate = Object.getOwnPropertyDescriptor(URL, 'createObjectURL')
+    const savedRevoke = Object.getOwnPropertyDescriptor(URL, 'revokeObjectURL')
+    const clickSpy = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {})
+    Object.defineProperty(URL, 'createObjectURL', {
+      value: (blob: Blob) => {
+        created.push(blob)
+        return 'blob:mock'
+      },
+      configurable: true,
+    })
+    Object.defineProperty(URL, 'revokeObjectURL', { value: () => {}, configurable: true })
+    try {
+      fireEvent.click(screen.getByRole('button', { name: 'Share your Tree' }))
+      expect(created).toHaveLength(1)
+      expect(created[0].type).toBe('image/svg+xml')
+      expect(clickSpy).toHaveBeenCalledTimes(1)
+    } finally {
+      clickSpy.mockRestore()
+      if (savedCreate) Object.defineProperty(URL, 'createObjectURL', savedCreate)
+      else delete (URL as { createObjectURL?: unknown }).createObjectURL
+      if (savedRevoke) Object.defineProperty(URL, 'revokeObjectURL', savedRevoke)
+      else delete (URL as { revokeObjectURL?: unknown }).revokeObjectURL
+    }
   })
 })
 

@@ -8,6 +8,7 @@ import {
   cameraReducer,
   cameraTransform,
   decorateWorld,
+  finaleArt,
   groundSpan,
   groundY,
   heightScaleView,
@@ -18,6 +19,7 @@ import type { Camera, CameraAction, World, WorldPlacement } from '../game/world'
 interface TreeProps {
   world: World
   seed: number
+  complete?: boolean
 }
 
 interface DragState {
@@ -33,7 +35,11 @@ const MINOR_TICK_LENGTH = 6
 const TICK_LABEL_GAP = 6
 const TICK_LABEL_BASELINE = 4
 
-export default function Tree({ world, seed }: TreeProps) {
+const FINALE_COLORS = {
+  crown: '#34d399',
+} as const
+
+export default function Tree({ world, seed, complete = false }: TreeProps) {
   const art = useMemo(() => decorateWorld(world, seed), [world, seed])
   const worldRef = useRef(world)
   useEffect(() => {
@@ -192,6 +198,8 @@ export default function Tree({ world, seed }: TreeProps) {
 
     return renderNode(ROOT_ID, null)
   }, [world, art])
+
+  const finale = useMemo(() => (complete ? finaleArt(world, seed) : null), [world, seed, complete])
   return (
     <>
       <svg
@@ -241,6 +249,33 @@ export default function Tree({ world, seed }: TreeProps) {
             ))}
           </g>
           {scene}
+          {finale && (
+            <g className="finale">
+              {finale.crownLimbs.map((limb, index) => (
+                <path
+                  key={`crown-${index}`}
+                  d={limb.d}
+                  pathLength={1}
+                  className="skyward"
+                  style={{
+                    stroke: FINALE_COLORS.crown,
+                    strokeWidth: limb.width,
+                    animationDelay: `${limb.delay}ms`,
+                  }}
+                />
+              ))}
+              {finale.stars.map((star, index) => (
+                <circle
+                  key={`star-${index}`}
+                  cx={star.x}
+                  cy={star.y}
+                  r={star.r}
+                  className="star"
+                  style={{ animationDelay: `${star.delay}ms` }}
+                />
+              ))}
+            </g>
+          )}
         </g>
         <g className="height-scale">
           <line x1={RULER_X} y1={0} x2={RULER_X} y2={VIEW_HEIGHT} className="height-ruler" />

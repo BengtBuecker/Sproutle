@@ -109,6 +109,34 @@
   animation: rise 0.7s ease-out 1 both;
 }
 
+@keyframes twinkle {
+  0%,
+  100% {
+    opacity: 0.9;
+  }
+  50% {
+    opacity: 0.3;
+  }
+}
+
+.skyward {
+  fill: none;
+  stroke-linecap: round;
+  stroke-dasharray: 1;
+  animation: draw 0.5s ease-out backwards;
+}
+
+.star {
+  fill: var(--color-slate-200);
+  animation:
+    pop 0.4s ease-out backwards,
+    twinkle 1.8s ease-in-out infinite;
+}
+
+.banner-in {
+  animation: pop 0.4s ease-out;
+}
+
 .height-ruler {
   stroke: var(--color-slate-600);
 }
@@ -172,6 +200,18 @@
   }
 
   .roots-in {
+    animation: none;
+  }
+
+  .skyward {
+    animation: none;
+  }
+
+  .star {
+    animation: pop 0.4s ease-out backwards;
+  }
+
+  .banner-in {
     animation: none;
   }
 }

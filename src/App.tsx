@@ -49,6 +49,8 @@ export default function App({ clock = DEFAULT_CLOCK }: AppProps) {
   const [feedback, setFeedback] = useState<Feedback | null>(null)
 
   const points = sprouts.reduce((sum, sprout) => sum + sprout.length, 0)
+  const isComplete = findableWords.length > 0 && sprouts.length === findableWords.length
+  const [bannerDismissed, setBannerDismissed] = useState(false)
   const world = useMemo(
     () => worldFromModel(buildTree(family.stem, sprouts)),
     [family.stem, sprouts],
@@ -77,6 +79,19 @@ export default function App({ clock = DEFAULT_CLOCK }: AppProps) {
     }, ROLLOVER_CHECK_MS)
     return () => clearInterval(timer)
   }, [clock, currentDay])
+
+  useEffect(() => {
+    setBannerDismissed(false)
+  }, [currentDay])
+
+  useEffect(() => {
+    if (!isComplete || bannerDismissed) return
+    function onKey(event: KeyboardEvent) {
+      if (event.key === 'Escape') setBannerDismissed(true)
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [isComplete, bannerDismissed])
 
   useEffect(() => {
     if (feedback === null || !prefersReducedMotion()) return
@@ -123,8 +138,36 @@ export default function App({ clock = DEFAULT_CLOCK }: AppProps) {
   return (
     <div className="fixed inset-0 bg-slate-900 text-slate-100">
       <div className="absolute inset-0">
-        <Tree world={world} seed={currentDay} />
+        <Tree world={world} seed={currentDay} complete={isComplete} />
       </div>
+      {isComplete && !bannerDismissed && (
+        <aside
+          role="status"
+          className="banner-in pointer-events-auto absolute left-1/2 top-24 z-20 flex -translate-x-1/2 flex-col items-center gap-2 rounded-lg bg-slate-800 px-5 py-4 shadow-xl"
+        >
+          <p className="text-sm font-semibold text-emerald-300">
+            All {findableWords.length} Sprouts found — the Tree is Complete!
+          </p>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={share}
+              autoFocus
+              className="rounded-full bg-emerald-500 px-5 py-2 text-sm font-semibold text-slate-900 hover:bg-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-300"
+            >
+              Share your Tree
+            </button>
+            <button
+              type="button"
+              onClick={() => setBannerDismissed(true)}
+              aria-label="Dismiss"
+              className="rounded-full bg-slate-700 px-5 py-2 text-sm font-semibold text-slate-100 hover:bg-slate-600 focus:outline-none focus:ring-2 focus:ring-slate-400"
+            >
+              Dismiss
+            </button>
+          </div>
+        </aside>
+      )}
       <main className="absolute inset-0 z-10 pointer-events-none flex flex-col justify-between p-4">
         <div className="flex items-start justify-between gap-4">
           <div>

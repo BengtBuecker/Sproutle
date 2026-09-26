@@ -340,6 +340,21 @@ const TUFT_LEAN_RANGE = 8
 const TUFT_EDGE_PAD_SLOTS = 0.15
 const TUFT_POSITION_JITTER = 0.7
 
+const CROWN_MAX_LIMBS = 12
+const CROWN_MIN_LENGTH = 40
+const CROWN_LENGTH_RANGE = 60
+const CROWN_WIDTH = 2.5
+const CROWN_BOW_RANGE = 12
+const CROWN_LEAN_RANGE = 20
+const CROWN_DELAY_STEP = 60
+const STAR_COUNT = 36
+const STAR_MIN_RADIUS = 1
+const STAR_RADIUS_RANGE = 1.5
+const SKY_HEIGHT = 340
+const SKY_PAD = 40
+const STAR_DELAY_BASE = 400
+const STAR_DELAY_STEP = 40
+
 export const ART_COLORS = {
   branch: '#92400e',
   twig: '#b45309',
@@ -452,4 +467,57 @@ export function decorateWorld(world: World, seed: number): WorldArt {
   }
 
   return { branchLimbs, twigs, roots, grassTufts }
+}
+
+export interface CrownLimb {
+  d: string
+  width: number
+  delay: number
+}
+
+export interface FinaleStar {
+  x: number
+  y: number
+  r: number
+  delay: number
+}
+
+export interface FinaleArt {
+  crownLimbs: CrownLimb[]
+  stars: FinaleStar[]
+}
+
+export function finaleArt(world: World, seed: number): FinaleArt {
+  const random = mulberry32((seed ^ 0x9e3779b9) >>> 0)
+  const topY = -world.height
+  const bounds = treeBounds(world)
+
+  const crownTier = (world.nodesByGeneration.get(world.maxGeneration) ?? []).slice(
+    0,
+    CROWN_MAX_LIMBS,
+  )
+  const crownLimbs: CrownLimb[] = crownTier.map((placement, index) => {
+    const length = CROWN_MIN_LENGTH + random() * CROWN_LENGTH_RANGE
+    const endX = placement.x + (random() - 0.5) * CROWN_LEAN_RANGE
+    const endY = placement.y - length
+    const bow = (random() - 0.5) * 2 * CROWN_BOW_RANGE
+    return {
+      d: curvedPath(placement, { x: endX, y: endY }, bow),
+      width: CROWN_WIDTH,
+      delay: index * CROWN_DELAY_STEP,
+    }
+  })
+
+  const skyTop = topY - SKY_PAD - SKY_HEIGHT
+  const skyBottom = topY - SKY_PAD
+  const stars: FinaleStar[] = []
+  for (let index = 0; index < STAR_COUNT; index++) {
+    stars.push({
+      x: bounds.minX + random() * (bounds.maxX - bounds.minX),
+      y: skyTop + random() * (skyBottom - skyTop),
+      r: STAR_MIN_RADIUS + random() * STAR_RADIUS_RANGE,
+      delay: STAR_DELAY_BASE + index * STAR_DELAY_STEP,
+    })
+  }
+  return { crownLimbs, stars }
 }

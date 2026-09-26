@@ -11,6 +11,7 @@ import {
   cameraReducer,
   clampCamera,
   decorateWorld,
+  finaleArt,
   groundSpan,
   groundY,
   heightMeters,
@@ -429,5 +430,38 @@ describe('worldFromModel orientation', () => {
       ...world.nodesByGeneration.get(2)!.map((placement) => placement.y),
     )
     expect(deepest).toBeLessThan(world.nodesByGeneration.get(1)![0].y!)
+  })
+})
+
+describe('finaleArt reaches the stars', () => {
+  const world = worldFromModel(buildTree('water', WIDE_WORDS))
+
+  it('is deterministic for a given Puzzle day and varies between days', () => {
+    expect(finaleArt(world, 7)).toEqual(finaleArt(world, 7))
+    expect(finaleArt(world, 7)).not.toEqual(finaleArt(world, 8))
+  })
+
+  it('extends crown limbs skyward from the treetop', () => {
+    const finale = finaleArt(world, 7)
+    expect(finale.crownLimbs.length).toBeGreaterThan(0)
+    for (const limb of finale.crownLimbs) {
+      const match = limb.d.match(PATH_NUMBERS)
+      expect(match).not.toBeNull()
+      const [, , my, , , ey] = match!.slice(1).map(Number)
+      expect(ey).toBeLessThan(my)
+      expect(limb.width).toBeGreaterThan(0)
+    }
+  })
+
+  it('sprinkles stars in the sky strictly above the treetop', () => {
+    const finale = finaleArt(world, 7)
+    const bounds = treeBounds(world)
+    expect(finale.stars.length).toBeGreaterThan(0)
+    for (const star of finale.stars) {
+      expect(star.y).toBeLessThan(-world.height)
+      expect(star.x).toBeGreaterThanOrEqual(bounds.minX)
+      expect(star.x).toBeLessThanOrEqual(bounds.maxX)
+      expect(star.r).toBeGreaterThan(0)
+    }
   })
 })
