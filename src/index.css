@@ -64,12 +64,12 @@
 
 .grow path {
   stroke-dasharray: 1;
-  animation: draw 0.6s ease-out;
+  animation: draw 0.45s ease-out backwards;
 }
 
 .grow circle,
 .grow text {
-  animation: pop 0.6s ease-out;
+  animation: pop 0.45s ease-out backwards;
 }
 
 .branch {
@@ -161,7 +161,7 @@
     animation: none;
   }
 
-  .grow line,
+  .grow path,
   .grow circle,
   .grow text {
     animation: none;

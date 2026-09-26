@@ -430,6 +430,34 @@ describe('App layout: vertical Tree, fixed HUD', () => {
   })
 })
 
+describe('App growth animation', () => {
+  it('staggers the Branch, Twig and Leaf of a new Sprout by 80 ms each', () => {
+    mountApp()
+    grow('waterproofing')
+    const delays = [...groupOf('waterproofing').querySelectorAll('path, circle, text')].map(
+      (el) => (el as HTMLElement).style.animationDelay,
+    )
+    expect(delays).toEqual(['0ms', '80ms', '160ms', '240ms'])
+  })
+
+  it('staggers a decomposed Sprout across its Branches, Twig and Leaf', () => {
+    mountApp()
+    grow('backwatered')
+    const delays = [...tree().querySelectorAll('.grow path, .grow circle, .grow text')].map(
+      (el) => (el as HTMLElement).style.animationDelay,
+    )
+    expect(delays).toEqual(['0ms', '80ms', '160ms', '240ms', '320ms', '400ms', '480ms'])
+  })
+
+  it('leaves elements of older Sprouts unanimated once a newer Sprout grows', () => {
+    mountApp()
+    grow('waterproof')
+    grow('watery')
+    expect(groupOf('watery').querySelector('path')!.style.animationDelay).toBe('0ms')
+    expect(groupOf('waterproof').querySelector('path')!.style.animationDelay).toBe('')
+  })
+})
+
 describe('App height scale', () => {
   it('shows a Height readout in meters that climbs with Branch generations', () => {
     mountApp()

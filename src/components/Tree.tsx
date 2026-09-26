@@ -26,6 +26,7 @@ interface DragState {
 }
 
 const WHEEL_ZOOM_SENSITIVITY = 0.002
+const STAGGER_MS = 80
 const RULER_X = 24
 const MAJOR_TICK_LENGTH = 12
 const MINOR_TICK_LENGTH = 6
@@ -107,6 +108,15 @@ export default function Tree({ world, seed }: TreeProps) {
   const limbById = new Map(art.branchLimbs.map((limb) => [limb.nodeId, limb]))
   const twigById = new Map(art.twigs.map((twig) => [twig.nodeId, twig]))
 
+  let growElementIndex = 0
+  function nextGrowDelay(): React.CSSProperties {
+    const style: React.CSSProperties = {
+      animationDelay: `${growElementIndex * STAGGER_MS}ms`,
+    }
+    growElementIndex += 1
+    return style
+  }
+
   function renderNode(id: string, parent: WorldPlacement | null) {
     const placement = world.placements[id]
     const { node } = placement
@@ -120,22 +130,53 @@ export default function Tree({ world, seed }: TreeProps) {
             d={limb.d}
             pathLength={1}
             className="branch"
-            style={{ stroke: ART_COLORS.branch, strokeWidth: limb.width }}
+            style={{
+              stroke: ART_COLORS.branch,
+              strokeWidth: limb.width,
+              ...(isNew ? nextGrowDelay() : {}),
+            }}
           />
         )}
         {node.word && twig ? (
           <>
-            <path d={twig.d} pathLength={1} className="twig" style={{ stroke: ART_COLORS.twig }} />
-            <circle cx={twig.leafX} cy={twig.leafY} r={4} className="leaf-dot" />
-            <text x={twig.labelX} y={twig.labelY} className="leaf-label">
+            <path
+              d={twig.d}
+              pathLength={1}
+              className="twig"
+              style={{ stroke: ART_COLORS.twig, ...(isNew ? nextGrowDelay() : {}) }}
+            />
+            <circle
+              cx={twig.leafX}
+              cy={twig.leafY}
+              r={4}
+              className="leaf-dot"
+              style={{ ...(isNew ? nextGrowDelay() : {}) }}
+            />
+            <text
+              x={twig.labelX}
+              y={twig.labelY}
+              className="leaf-label"
+              style={{ ...(isNew ? nextGrowDelay() : {}) }}
+            >
               {node.word}
             </text>
           </>
         ) : (
           <>
-            <circle cx={placement.x} cy={placement.y} r={3} className="stem-dot" />
+            <circle
+              cx={placement.x}
+              cy={placement.y}
+              r={3}
+              className="stem-dot"
+              style={{ ...(isNew ? nextGrowDelay() : {}) }}
+            />
             {node.kind && (
-              <text x={placement.x + 8} y={placement.y + 4} className="chunk-label">
+              <text
+                x={placement.x + 8}
+                y={placement.y + 4}
+                className="chunk-label"
+                style={{ ...(isNew ? nextGrowDelay() : {}) }}
+              >
                 {node.chunk.toUpperCase()}
               </text>
             )}
