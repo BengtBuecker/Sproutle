@@ -1,21 +1,22 @@
 import { useEffect, useMemo, useReducer, useRef } from 'react'
-import { buildTree, ROOT_ID } from '../game/tree'
+import { ROOT_ID } from '../game/tree'
 import {
   ART_COLORS,
   START_CAMERA,
   VIEW_HEIGHT,
   VIEW_WIDTH,
   cameraReducer,
+  cameraTransform,
   decorateWorld,
   groundSpan,
   groundY,
-  worldFromModel,
+  heightScaleView,
+  newestPlacement,
 } from '../game/world'
-import type { Camera, CameraAction, WorldPlacement } from '../game/world'
+import type { Camera, CameraAction, World, WorldPlacement } from '../game/world'
 
 interface TreeProps {
-  stem: string
-  sprouts: readonly string[]
+  world: World
   seed: number
 }
 
@@ -25,10 +26,13 @@ interface DragState {
 }
 
 const WHEEL_ZOOM_SENSITIVITY = 0.002
+const RULER_X = 24
+const MAJOR_TICK_LENGTH = 12
+const MINOR_TICK_LENGTH = 6
+const TICK_LABEL_GAP = 6
+const TICK_LABEL_BASELINE = 4
 
-export default function Tree({ stem, sprouts, seed }: TreeProps) {
-  const model = useMemo(() => buildTree(stem, sprouts), [stem, sprouts])
-  const world = useMemo(() => worldFromModel(model), [model])
+export default function Tree({ world, seed }: TreeProps) {
   const art = useMemo(() => decorateWorld(world, seed), [world, seed])
   const worldRef = useRef(world)
   useEffect(() => {
@@ -41,6 +45,16 @@ export default function Tree({ stem, sprouts, seed }: TreeProps) {
     (initialWorld) =>
       cameraReducer(START_CAMERA, { type: 'frame-puzzle' }, initialWorld),
   )
+
+  const grownCount = useRef(world.sproutCount)
+  useEffect(() => {
+    if (world.sproutCount > grownCount.current) dispatch({ type: 'follow-growth' })
+    grownCount.current = world.sproutCount
+  }, [world.sproutCount])
+
+  useEffect(() => {
+    dispatch({ type: 'frame-puzzle' })
+  }, [seed])
 
   const svgRef = useRef<SVGSVGElement>(null)
   useEffect(() => {
@@ -89,17 +103,7 @@ export default function Tree({ stem, sprouts, seed }: TreeProps) {
     if (dragRef.current.pointers.size < 2) dragRef.current.lastPinchDistance = null
   }
 
-  const grownCount = useRef(sprouts.length)
-  useEffect(() => {
-    if (sprouts.length > grownCount.current) dispatch({ type: 'follow-growth' })
-    grownCount.current = sprouts.length
-  }, [sprouts.length])
-
-  useEffect(() => {
-    dispatch({ type: 'frame-puzzle' })
-  }, [stem])
-
-  const newestSproutIndex = sprouts.length - 1
+  const newestSproutIndex = newestPlacement(world).node.sproutIndex
   const limbById = new Map(art.branchLimbs.map((limb) => [limb.nodeId, limb]))
   const twigById = new Map(art.twigs.map((twig) => [twig.nodeId, twig]))
 
@@ -137,13 +141,12 @@ export default function Tree({ stem, sprouts, seed }: TreeProps) {
             )}
           </>
         )}
-        {model.childOrder[id].map((childId) => renderNode(childId, placement))}
+        {world.childOrder[id].map((childId) => renderNode(childId, placement))}
       </g>
     )
   }
 
   const ground = groundSpan(world)
-  const transform = `translate(${VIEW_WIDTH / 2}px, ${VIEW_HEIGHT / 2}px) scale(${camera.zoom}) translate(${-camera.focusX}px, ${-camera.focusY}px)`
   return (
     <>
       <svg
@@ -160,7 +163,7 @@ export default function Tree({ stem, sprouts, seed }: TreeProps) {
       >
         <g
           className={camera.eased ? 'camera-group eased' : 'camera-group'}
-          style={{ transform, transformOrigin: '0 0', transformBox: 'view-box' }}
+          style={{ transform: cameraTransform(camera), transformOrigin: '0 0', transformBox: 'view-box' }}
         >
           <g className="roots-in">
             {art.roots.map((root, index) => (
@@ -193,6 +196,29 @@ export default function Tree({ stem, sprouts, seed }: TreeProps) {
             ))}
           </g>
           {renderNode(ROOT_ID, null)}
+        </g>
+        <g className="height-scale">
+          <line x1={RULER_X} y1={0} x2={RULER_X} y2={VIEW_HEIGHT} className="height-ruler" />
+          {heightScaleView(camera).map((tick) => (
+            <g key={tick.meters}>
+              <line
+                x1={RULER_X - (tick.major ? MAJOR_TICK_LENGTH : MINOR_TICK_LENGTH)}
+                y1={tick.screenY}
+                x2={RULER_X}
+                y2={tick.screenY}
+                className={tick.major ? 'height-tick-major' : 'height-tick-minor'}
+              />
+              {tick.major && (
+                <text
+                  x={RULER_X + TICK_LABEL_GAP}
+                  y={tick.screenY + TICK_LABEL_BASELINE}
+                  className="height-tick-label"
+                >
+                  {tick.meters} m
+                </text>
+              )}
+            </g>
+          ))}
         </g>
       </svg>
       {!camera.following && (

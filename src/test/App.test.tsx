@@ -335,6 +335,7 @@ describe('App layout: vertical Tree, fixed HUD', () => {
     expect(treeZone()).not.toContainElement(screen.getByText(`3 of ${TOTAL}`))
     expect(treeZone()).not.toContainElement(screen.getByText('Points: 25'))
     expect(treeZone()).not.toContainElement(screen.getByText('Streak: 1'))
+    expect(treeZone()).not.toContainElement(screen.getByText('Height: 5 m'))
   })
 
   it('never reallocates the interface while words grow the Tree', () => {
@@ -426,6 +427,42 @@ describe('App layout: vertical Tree, fixed HUD', () => {
     expect(view.right).toBeGreaterThanOrEqual(bounds.maxX)
     expect(view.top).toBeLessThanOrEqual(bounds.minY)
     expect(view.bottom).toBeGreaterThanOrEqual(bounds.maxY)
+  })
+})
+
+describe('App height scale', () => {
+  it('shows a Height readout in meters that climbs with Branch generations', () => {
+    mountApp()
+    expect(screen.getByText('Height: 0 m')).toBeInTheDocument()
+    grow('waterproof')
+    expect(screen.getByText('Height: 5 m')).toBeInTheDocument()
+    grow('waterproofing')
+    expect(screen.getByText('Height: 10 m')).toBeInTheDocument()
+  })
+
+  it('marks the height scale at 1 m and the 5, 10, 25 and 30 m markers', () => {
+    mountApp()
+    const svg = tree()
+    const labels = [...svg.querySelectorAll('.height-tick-label')].map((el) => el.textContent)
+    expect(labels).toEqual(['5 m', '10 m', '25 m', '30 m'])
+    expect(svg.querySelectorAll('.height-tick-minor').length).toBe(1)
+    expect(svg.querySelectorAll('.height-tick-major').length).toBe(4)
+    expect(svg.querySelector('.height-ruler')).not.toBeNull()
+  })
+
+  it('keeps tick positions world-locked while labels stay screen-fixed and readable', () => {
+    mountApp()
+    grow('waterproof')
+    grow('waterproofing')
+    const svg = tree()
+    const scale = svg.querySelector('.height-scale')!
+    expect(svg.querySelector('.camera-group')!.contains(scale)).toBe(false)
+    const tenMeters = [...scale.querySelectorAll('.height-tick-label')].find(
+      (el) => el.textContent === '10 m',
+    )!
+    const yBefore = tenMeters.getAttribute('y')
+    fireEvent.wheel(svg, { deltaY: -240, ctrlKey: true })
+    expect(tenMeters.getAttribute('y')).not.toBe(yBefore)
   })
 })
 

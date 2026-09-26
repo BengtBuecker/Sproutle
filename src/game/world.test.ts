@@ -2,14 +2,20 @@ import { describe, expect, it } from 'vitest'
 import { buildTree } from './tree'
 import {
   FOLLOW_ZOOM,
+  HEIGHT_SCALE_TICKS,
+  METERS_PER_GENERATION,
   PAN_MARGIN,
   START_CAMERA,
+  VIEW_HEIGHT,
   ZOOM_MAX,
   cameraReducer,
   clampCamera,
   decorateWorld,
   groundSpan,
   groundY,
+  heightMeters,
+  heightScaleView,
+  metersToWorldY,
   newestPlacement,
   treeBounds,
   worldFromModel,
@@ -319,6 +325,65 @@ describe('cameraReducer manual control', () => {
     expect(zoomed.eased).toBe(false)
     const resumed = cameraReducer(zoomed, { type: 'resume-follow' }, world)
     expect(resumed.eased).toBe(true)
+  })
+})
+
+describe('height scale', () => {
+  it('adds a fixed five meters per Branch generation, topping out at 30 m', () => {
+    expect(METERS_PER_GENERATION).toBe(5)
+    expect(heightMeters(worldFromModel(buildTree('water', [])))).toBe(0)
+    expect(heightMeters(worldFromModel(buildTree('water', ['waterproof'])))).toBe(5)
+    expect(
+      heightMeters(worldFromModel(buildTree('water', ['waterproof', 'waterproofing']))),
+    ).toBe(10)
+    expect(
+      heightMeters(worldFromModel(buildTree('water', ['awater', 'seawater', 'seawaters']))),
+    ).toBe(15)
+    expect(
+      heightMeters(
+        worldFromModel(
+          buildTree('water', [
+            'watera',
+            'waterab',
+            'waterabc',
+            'waterabcd',
+            'waterabcde',
+            'waterabcdef',
+          ]),
+        ),
+      ),
+    ).toBe(30)
+  })
+
+  it('maps meters to world heights above the Ground', () => {
+    expect(metersToWorldY(0)).toBe(groundY)
+    expect(metersToWorldY(5)).toBeLessThan(groundY)
+    expect(metersToWorldY(30)).toBeLessThan(metersToWorldY(5))
+  })
+
+  it('places the scale ticks at 1 m and the 5, 10, 25 and 30 m markers', () => {
+    expect(HEIGHT_SCALE_TICKS.map((tick) => tick.meters)).toEqual([1, 5, 10, 25, 30])
+    expect(HEIGHT_SCALE_TICKS.filter((tick) => tick.major).map((tick) => tick.meters)).toEqual([
+      5, 10, 25, 30,
+    ])
+  })
+
+  it('projects ticks with the camera: the focused height sits at screen center', () => {
+    const camera: Camera = {
+      focusX: 0,
+      focusY: metersToWorldY(10),
+      zoom: 2,
+      following: true,
+      eased: true,
+    }
+    const view = heightScaleView(camera)
+    const tenMeters = view.find((tick) => tick.meters === 10)!
+    expect(tenMeters.screenY).toBeCloseTo(VIEW_HEIGHT / 2)
+    const fiveMeters = view.find((tick) => tick.meters === 5)!
+    expect(fiveMeters.screenY).toBeGreaterThan(tenMeters.screenY)
+    expect(fiveMeters.screenY).toBeCloseTo(
+      VIEW_HEIGHT / 2 + (metersToWorldY(5) - metersToWorldY(10)) * 2,
+    )
   })
 })
 

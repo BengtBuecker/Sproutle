@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import type { FormEvent } from 'react'
 import { WORD_FAMILIES } from './data/wordFamilies'
 import { stemOfTheDay, utcDayNumber } from './game/stemOfTheDay'
@@ -6,6 +6,8 @@ import type { Clock } from './game/stemOfTheDay'
 import { loadProgress, loadStreak, saveProgress, saveStreak } from './game/progress'
 import { prefersReducedMotion } from './game/motion'
 import { buildShareSvg, downloadShareImage } from './game/shareCard'
+import { buildTree } from './game/tree'
+import { heightMeters, worldFromModel } from './game/world'
 import Tree from './components/Tree'
 
 interface AppProps {
@@ -47,6 +49,11 @@ export default function App({ clock = DEFAULT_CLOCK }: AppProps) {
   const [feedback, setFeedback] = useState<Feedback | null>(null)
 
   const points = sprouts.reduce((sum, sprout) => sum + sprout.length, 0)
+  const world = useMemo(
+    () => worldFromModel(buildTree(family.stem, sprouts)),
+    [family.stem, sprouts],
+  )
+  const height = heightMeters(world)
   const displayedStreak =
     streak.lastPlayedDay !== null && streak.lastPlayedDay >= currentDay - 1 ? streak.count : 0
 
@@ -115,7 +122,7 @@ export default function App({ clock = DEFAULT_CLOCK }: AppProps) {
   return (
     <div className="fixed inset-0 bg-slate-900 text-slate-100">
       <div className="absolute inset-0">
-        <Tree stem={family.stem} sprouts={sprouts} seed={currentDay} />
+        <Tree world={world} seed={currentDay} />
       </div>
       <main className="absolute inset-0 z-10 pointer-events-none flex flex-col justify-between p-4">
         <div className="flex items-start justify-between gap-4">
@@ -130,6 +137,7 @@ export default function App({ clock = DEFAULT_CLOCK }: AppProps) {
             </p>
             <p>Points: {points}</p>
             <p>Streak: {displayedStreak}</p>
+            <p>Height: {height} m</p>
           </div>
         </div>
         <div className="flex flex-col items-center gap-2 pointer-events-auto">

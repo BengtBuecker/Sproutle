@@ -10,8 +10,10 @@ export interface WorldPlacement {
 export interface World {
   placements: Record<string, WorldPlacement>
   nodesByGeneration: Map<number, WorldPlacement[]>
+  childOrder: Record<string, string[]>
   maxGeneration: number
   leafCount: number
+  sproutCount: number
   width: number
   height: number
   originX: number
@@ -53,11 +55,16 @@ export function worldFromModel(model: TreeModel): World {
 
   const leafCount = nextSlot
   const spread = leafCount === 0 ? 0 : (leafCount - 1) * HORIZONTAL_STEP
+  const sproutCount = Object.values(placements).filter(
+    (placement) => placement.node.word !== null,
+  ).length
   return {
     placements,
     nodesByGeneration,
+    childOrder: model.childOrder,
     maxGeneration,
     leafCount,
+    sproutCount,
     width: 2 * EDGE_MARGIN + spread + LABEL_SPACE,
     height: maxGeneration * GENERATION_GAP,
     originX: EDGE_MARGIN,
@@ -72,6 +79,49 @@ export const VIEW_WIDTH = 1200
 export const VIEW_HEIGHT = 800
 export const ZOOM_MAX = 2.5
 export const FOLLOW_ZOOM = 2
+
+export const METERS_PER_GENERATION = 5
+
+export function heightMeters(world: World): number {
+  return world.maxGeneration * METERS_PER_GENERATION
+}
+
+export function metersToWorldY(meters: number): number {
+  return groundY - (meters * GENERATION_GAP) / METERS_PER_GENERATION
+}
+
+export interface HeightTick {
+  meters: number
+  major: boolean
+}
+
+export const HEIGHT_SCALE_TICKS: HeightTick[] = [
+  { meters: 1, major: false },
+  { meters: 5, major: true },
+  { meters: 10, major: true },
+  { meters: 25, major: true },
+  { meters: 30, major: true },
+]
+
+export interface HeightTickView extends HeightTick {
+  worldY: number
+  screenY: number
+}
+
+export function heightScaleView(camera: Camera): HeightTickView[] {
+  return HEIGHT_SCALE_TICKS.map((tick) => {
+    const worldY = metersToWorldY(tick.meters)
+    return {
+      ...tick,
+      worldY,
+      screenY: VIEW_HEIGHT / 2 + (worldY - camera.focusY) * camera.zoom,
+    }
+  })
+}
+
+export function cameraTransform(camera: Camera): string {
+  return `translate(${VIEW_WIDTH / 2}px, ${VIEW_HEIGHT / 2}px) scale(${camera.zoom}) translate(${-camera.focusX}px, ${-camera.focusY}px)`
+}
 
 export const PAN_MARGIN = 120
 const BOUNDS_PAD_LEFT = 10
@@ -202,12 +252,8 @@ export function cameraReducer(camera: Camera, action: CameraAction, world: World
       return frameGround(world, camera)
     case 'frame-tree':
       return frameTree(world, camera)
-    case 'frame-puzzle': {
-      const hasSprouts = Object.values(world.placements).some(
-        (placement) => placement.node.word !== null,
-      )
-      return hasSprouts ? frameTree(world, camera) : frameGround(world, camera)
-    }
+    case 'frame-puzzle':
+      return world.sproutCount > 0 ? frameTree(world, camera) : frameGround(world, camera)
     case 'follow-growth': {
       if (!camera.following) return camera
       return followNewestGrowth(world, camera, true)

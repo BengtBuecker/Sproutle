@@ -109,6 +109,24 @@
   animation: rise 0.7s ease-out 1 both;
 }
 
+.height-ruler {
+  stroke: var(--color-slate-600);
+}
+
+.height-tick-major {
+  stroke: var(--color-slate-400);
+  stroke-width: 2;
+}
+
+.height-tick-minor {
+  stroke: var(--color-slate-500);
+}
+
+.height-tick-label {
+  fill: var(--color-slate-300);
+  font-size: 14px;
+}
+
 .ground {
   stroke-width: 2;
   stroke-linecap: round;
